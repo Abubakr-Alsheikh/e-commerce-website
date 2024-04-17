@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head_title %} Women Products {% endblock head_title %}
+
+{% block content%} 
+	<div class="breadcrumbs">
+		<div class="container">
+			<div class="row">
+				<div class="col">
+					<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>Women products</span></p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="colorlib-product">
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-8 offset-sm-2 text-center colorlib-heading colorlib-heading-sm">
+					<h2>View Women Products</h2>
+				</div>
+			</div>
+			<div class="row row-pb-md">
+				{% if items %}
+					{% for item in items %}
+					<div class="col-lg-3 mb-4 text-center">
+						<div class="product-entry border">
+							<a href="{{item.get_absolute_url}}" class="prod-img">
+								<img src="{{ item.image.url }}" class="img-fluid" alt="Free html5 bootstrap 4 template">
+							</a>
+							<div class="desc">
+								<span class="text-dark">{{item.get_category_display}}</span>
+								<h2><a href="{{item.get_absolute_url}}">{{item}}</a><span class="badge badge-pill bg-{{item.get_label_display}} text-light m-1">New</span></h2>
+								<span class="price">
+									{% if item.discount_price %}
+									<del>${{item.price}}</del> ${{item.discount_price}}
+									{% else %}
+									${{item.price}}
+									{% endif %}
+								</span>
+							</div>
+						</div>
+					</div>
+					{% endfor %}
+				{% else %}
+					<div class="col-12">
+						<p class="text-center">There are no products to show.</p>
+					</div>
+				{% endif %}
+			</div>
+
+			{% if items.has_other_pages %}
+			<div class="row">
+				<div class="col-md-12 text-center">
+					<div class="block-27">
+						<ul>
+							<ul>
+								{% if page_obj.has_previous %}
+									<li><a href="?page=1">First</i></a></li>
+									<li><a href="?page={{ page_obj.previous_page_number }}"><i class="ion-ios-arrow-back"></i></a></li>
+								{% endif %}
+							
+								{% for num in page_obj.paginator.page_range %}
+									{% if page_obj.number == num %}
+										<li class="active"><span>{{ num }}</span></li>
+									{% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+										<li><a href="?page={{ num }}">{{ num }}</a></li>
+									{% endif %}
+								{% endfor %}
+							
+								{% if page_obj.has_next %}
+									<li><a href="?page={{ page_obj.next_page_number }}"><i class="ion-ios-arrow-forward"></i></a></li>
+									<li><a href="?page={{ page_obj.paginator.num_pages }}">Last</a></li>
+								{% endif %}
+							</ul>
+						</ul>
+					</div>
+				</div>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+{% endblock %}

@@ -1,0 +1,384 @@
+{% extends "base.html" %} 
+{% load static %} 
+{% load crispy_forms_tags %} 
+{% block extra_head %}
+<style>
+  #stripeBtnLabel {
+    font-family: "Helvetica Neue", Helvetica, sans-serif;
+    font-size: 16px;
+    font-variant: normal;
+    padding: 0;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    font-weight: 500;
+    display: block;
+  }
+
+  #stripeBtn {
+    border: none;
+    border-radius: 4px;
+    outline: none;
+    text-decoration: none;
+    color: #fff;
+    background: #32325d;
+    white-space: nowrap;
+    display: inline-block;
+    height: 40px;
+    line-height: 40px;
+    box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.025em;
+    text-decoration: none;
+    -webkit-transition: all 150ms ease;
+    transition: all 150ms ease;
+    float: left;
+    width: 100%;
+  }
+
+  button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+    background-color: #43458b;
+  }
+
+  .stripe-form {
+    padding: 5px 30px;
+  }
+
+  #card-errors {
+    height: 20px;
+    padding: 4px 0;
+    color: #fa755a;
+  }
+
+  .stripe-form-row {
+    width: 100%;
+    float: left;
+    margin-top: 5px;
+    margin-bottom: 5px;
+  }
+
+  /**
+ * The CSS shown here will not be introduced in the Quickstart guide, but shows
+ * how you can use CSS to style your Element's container.
+ */
+  .StripeElement {
+    box-sizing: border-box;
+
+    height: 40px;
+
+    padding: 10px 12px;
+
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background-color: white;
+
+    box-shadow: 0 1px 3px 0 #e6ebf1;
+    -webkit-transition: box-shadow 150ms ease;
+    transition: box-shadow 150ms ease;
+  }
+
+  .StripeElement--focus {
+    box-shadow: 0 1px 3px 0 #cfd7df;
+  }
+
+  .StripeElement--invalid {
+    border-color: #fa755a;
+  }
+
+  .StripeElement--webkit-autofill {
+    background-color: #fefde5 !important;
+  }
+
+  .current-card-form {
+    display: none;
+  }
+</style>
+{% endblock %} {% block content%}
+<div class="breadcrumbs">
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <p class="bread">
+          <span><a href="{% url 'core:index' %}">Home</a></span> /
+          <span>Checkout</span>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="colorlib-product">
+  <div class="container">
+    <div class="row row-pb-lg">
+      <div class="col-sm-10 offset-md-1">
+        <div class="process-wrap">
+          <div class="process text-center active">
+            <p><span>01</span></p>
+            <h3>Shopping Cart</h3>
+          </div>
+          <div class="process text-center active">
+            <p><span>02</span></p>
+            <h3>Checkout</h3>
+          </div>
+          <div class="process text-center">
+            <p><span>03</span></p>
+            <h3>Order Complete</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-lg-8">
+        <form method="post" class="colorlib-form">
+          <h3>Billing Address</h3>
+          {% csrf_token %}
+          <!-- Card details element -->
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_billing_country">Select Country</label>
+              <div class="form-field">
+                <i class="icon icon-arrow-down3"></i>
+                {{ form.billing_country }}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_billing_address">Address</label>
+              {{ form.billing_address }}
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_billing_zip_code">Zip/Postal Code</label>
+              {{ form.billing_zip_code }}
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label class="d-block">
+                {{ form.set_default_billing }} Set as default billing address?
+              </label>
+              <label class="d-block">
+                {% if default_billing_address %}
+                  {{ form.use_default_billing }} Use default billing address: {{ default_billing_address.address|slice:":20" }}...
+                {% endif %}
+              </label>
+            </div>
+          </div>
+
+          <hr />
+
+          <h3>Shipping Address</h3>
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_shipping_country">Select Country</label>
+              <div class="form-field">
+                <i class="icon icon-arrow-down3"></i>
+                {{ form.shipping_country }}
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_shipping_address">Address</label>
+              {{ form.shipping_address }}
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label for="id_shipping_zip_code">Zip/Postal Code</label>
+              {{ form.shipping_zip_code }}
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="form-group">
+              <label class="d-block">
+                {{ form.set_default_shipping }} Set as default shipping
+                address?
+              </label>
+              <label class="d-block">
+                {% if default_shipping_address %}
+                    {{ form.use_default_shipping }} Use default shipping address: {{ default_shipping_address.address|slice:":20" }}...
+                {% endif %}
+              </label>
+            </div>
+          </div>
+          <hr />
+
+          <div class="col-md-12">
+            <div class="form-group">
+              {{ form.save_info }} Save info for another payment?
+            </div>
+          </div>
+
+          <hr>
+
+          <h3>Payment Method</h3>
+          {% for choice in form.payment_options %}
+            <div class="form-group">
+              <div class="col-md-12">
+                <div class="radio">
+                  <label>
+                    <input type="radio" name="payment_options" value="{{ choice.data.value }}" id="id_{{ choice.id_for_label }}" {% if choice.data.selected %} checked {% endif %}>
+                    {{ choice.choice_label }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+
+
+          <div id="card-element">
+            <!-- A Stripe Element will be inserted here. -->
+          </div>
+
+          <!-- Hidden input for Stripe Token -->
+          <input type="hidden" name="stripeToken" id="stripeToken" />
+          <button class="btn btn-primary" type="submit">Place an order</button>
+        </form>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="row">
+          <div class="col-md-12">
+            <div class="cart-detail">
+              <h2>Cart Total</h2>
+              <ul>
+                <li>
+                  <span>Subtotal</span> <span>{{ subtotal }}</span>
+                  <ul>
+                    {% for item in order_items %}
+                    <li>
+                      <span>{{ item.quantity }} x {{ item.item.title }}</span>
+                      <span>${{ item.get_final_price }}</span>
+                    </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+                <li><span>Shipping</span> <span>{{ shipping }}</span></li>
+                <li><span>Order Total</span> <span>{{ order_total }}</span></li>
+              </ul>
+            </div>
+          </div>
+          <!-- 
+          <div class="w-100"></div>
+
+          <div class="col-md-12">
+            <div class="cart-detail">
+              <h2>Payment Method</h2>
+              <div class="form-group">
+                <div class="col-md-12">
+                  <div class="radio">
+                    <label
+                      ><input type="radio" name="optradio" /> Stripe</label
+                    >
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="col-md-12">
+                  <div class="radio">
+                    <label><input type="radio" name="optradio" /> Paypal</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div> -->
+        </div>
+        <!-- <div class="row">
+          <div class="col-md-12 text-center">
+            <p><a href="#" class="btn btn-primary">Place an order</a></p>
+          </div>
+        </div> -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_body %}
+<script src="https://js.stripe.com/v3/"></script>
+
+<script>
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var useDefaultBillingCheckbox = document.getElementById('id_use_default_billing');
+    var useDefaultShippingCheckbox = document.getElementById('id_use_default_shipping');
+
+    function toggleBillingFields(required) {
+        document.getElementById('id_billing_country').required = required;
+        document.getElementById('id_billing_address').required = required;
+        document.getElementById('id_billing_zip_code').required = required;
+    }
+
+    function toggleShippingFields(required) {
+        document.getElementById('id_shipping_country').required = required;
+        document.getElementById('id_shipping_address').required = required;
+        document.getElementById('id_shipping_zip_code').required = required;
+    }
+
+    useDefaultBillingCheckbox.addEventListener('change', function() {
+        toggleBillingFields(!useDefaultBillingCheckbox.checked);
+    });
+
+    useDefaultShippingCheckbox.addEventListener('change', function() {
+        toggleShippingFields(!useDefaultShippingCheckbox.checked);
+    });
+
+    // Initialize the form with the correct state
+    toggleBillingFields(!useDefaultBillingCheckbox.checked);
+    toggleShippingFields(!useDefaultShippingCheckbox.checked);
+});
+
+
+  // Create a Stripe client
+  var stripe = Stripe("pk_test_TYooMQauvdEDq54NiTphI7jx");
+
+  // Create an instance of Elements
+  var elements = stripe.elements();
+
+  // Custom styling can be passed to options when creating an Element.
+  var style = {
+    base: {
+      // Add your base input styles here. For example:
+      fontSize: "16px",
+      color: "#32325d",
+    },
+  };
+
+  // Create an instance of the card Element
+  var card = elements.create("card", { style: style });
+
+  // Add an instance of the card Element into the `card-element` <div>
+  card.mount("#card-element");
+
+  // Handle form submission
+  var form = document.getElementById("payment-form");
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    stripe.createToken(card).then(function (result) {
+      if (result.error) {
+        // Inform the user if there was an error
+        var errorElement = document.getElementById("card-errors");
+        errorElement.textContent = result.error.message;
+      } else {
+        // Send the token to your server
+        var tokenInput = document.getElementById("stripeToken");
+        tokenInput.value = result.token.id;
+
+        // Submit the form
+        form.submit();
+      }
+    });
+  });
+</script>
+{% endblock extra_body %}
