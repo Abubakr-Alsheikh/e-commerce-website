@@ -1,18 +1,24 @@
+from audioop import avg
+import json
 import random
 import string
+from django.http import HttpResponseRedirect, JsonResponse
 from django.utils import timezone
 import stripe
 from django.shortcuts import render
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from core.models import Item, Order, OrderItem, Address, Payment, Coupon
-from .forms import CheckoutForm, RefundForm
+from .forms import CheckoutForm, RefundForm, ReviewForm
 from django.views.generic import ListView, DetailView, View
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
+from django.db.models import Q
+from django.db.models import Avg, Count
+from django.core.paginator import Paginator
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -21,6 +27,14 @@ class HomeView(ListView):
     template_name = 'core/index.html'
     paginate_by = 12
     context_object_name = 'items'
+
+def search_items(request):
+    if 'q' in request.GET:
+        query = request.GET.get('q')
+        items = Item.objects.filter(title__icontains=query, available=True)
+        results = [{'name': item.title, 'url': item.get_absolute_url()} for item in items]
+        return JsonResponse({'results': results})
+    return JsonResponse({'results': []})
 
 class MenView(ListView):
     model = Item
@@ -46,39 +60,151 @@ class AllProductsView(ListView):
     paginate_by = 8
     context_object_name = 'items'
 
+class SearchResultsView(ListView):
+    model = Item
+    template_name = 'core/search-results.html'
+    paginate_by = 8
+    context_object_name = 'items'
+    
+    def get_queryset(self):
+        query = self.request.GET.get('q', '')
+        if query:
+            return Item.objects.filter(
+                Q(title__icontains=query) | 
+                Q(description__icontains=query),
+                available=True
+            ).distinct()
+        return Item.objects.none()  # Return an empty queryset if no query
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.request.GET.get('q', '')
+        return context
+
 class ItemDetailView(DetailView):
     model = Item
     template_name = 'core/product-detail.html'
     context_object_name = 'item'
+    # paginate_by = 3  # Set the number of items per page    
 
-class CartView(LoginRequiredMixin, View):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['review_form'] = ReviewForm()
+        context['is_in_cart'] = self.object.is_in_user_cart(self.request.user)
+
+        # Calculate the average rating and the number of reviews
+        reviews = self.object.review_set.all().aggregate(
+            average_rating=Avg('rating'),
+            number_of_reviews=Count('id')
+        )
+
+        # Set default values if reviews are None
+        context['average_rating'] = reviews['average_rating'] or 0
+        context['number_of_reviews'] = reviews['number_of_reviews'] or 0
+
+        # Calculate the number of full, half, and empty stars
+        full_stars = int(context['average_rating'])
+        half_star = context['average_rating'] - full_stars >= 0.5
+        empty_stars = 5 - full_stars - int(half_star)
+
+        # Add the star counts to the context
+        context['full_stars'] = full_stars
+        context['half_star'] = half_star
+        context['empty_stars'] = empty_stars
+
+        # Get the count of reviews for each star rating
+        star_counts = {
+            '5_stars': self.object.review_set.filter(rating=5).count(),
+            '4_stars': self.object.review_set.filter(rating=4).count(),
+            '3_stars': self.object.review_set.filter(rating=3).count(),
+            '2_stars': self.object.review_set.filter(rating=2).count(),
+            '1_star': self.object.review_set.filter(rating=1).count(),
+        }
+
+        # Calculate the percentage of each star rating
+        total_reviews = context['number_of_reviews']
+        for star, count in star_counts.items():
+            percentage = (count / total_reviews * 100) if total_reviews > 0 else 0
+            context[star + '_percentage'] = f"{percentage:.0f}%"
+
+        # Add the star counts and percentages to the context
+        context.update(star_counts)
+        
+        # Get all reviews and paginate them
+        reviews = self.object.review_set.all()
+        paginator = Paginator(reviews, 5)  # Show 5 reviews per page
+        page_number = self.request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+        context['page_obj'] = page_obj
+
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.item = self.object
+            review.user = request.user
+            review.save()
+            messages.success(request, "Review added successfully!")
+            return HttpResponseRedirect(self.object.get_absolute_url())
+        messages.warning(request, "Something went wrong! please try again.")
+        return self.render_to_response(self.get_context_data(form=form))
+
+@login_required
+def add_review(request, item_id):
+    item = Item.objects.get(pk=item_id)
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.item = item
+            review.user = request.user
+            review.save()
+            return redirect('item_detail', item_id=item.id)
+    else:
+        form = ReviewForm()
+    return render(request, 'add_review.html', {'form': form, 'item': item})
+
+class CartView(LoginRequiredMixin, View):# view.py
     def get(self, *args, **kwargs):
         try:
             order_items = OrderItem.objects.filter(order__user=self.request.user, order__is_ordered=False)
-            # TODO: get the copoun of the order obejct
-            order = Order.objects.filter(user=self.request.user, is_ordered=False)
-            coupon_code = self.request.GET.get('coupon_code')
-            coupon_discount = Coupon.objects.get(code=order.coupon)
-            total_withou_discount = sum([item.get_total_cost() for item in order_items])
-            total = sum([item.get_final_price() for item in order_items])
+            order = Order.objects.filter(user=self.request.user, is_ordered=False).first()
+            coupon_code = self.request.GET.get('coupon_code') 
+
+            if order and order.coupon:  
+                coupon_discount_percentage = order.coupon.discount  
+            else:
+                coupon_discount_percentage = 0
+
+            subtotal = sum([item.get_total_cost() for item in order_items])
             saving = sum([item.get_total_discount() for item in order_items])
+            shipping = 0
+            subtotal_after_saving = subtotal - saving
+            coupon_discount = (subtotal_after_saving * coupon_discount_percentage) / 100
+            total = subtotal_after_saving - coupon_discount
+
             context = {
                 'order_items': order_items,
-                'total_withou_discount': total_withou_discount,
-                'total': total,
+                'subtotal': subtotal,
                 'saving': saving,
-                'coupon_code': coupon_code,
                 'coupon_discount': coupon_discount,
+                'total': total,
+                'coupon_code': coupon_code,
+                'coupon_discount_percentage': coupon_discount_percentage,
+                'shipping': shipping
             }
             return render(self.request, 'core/cart.html', context)
         except ObjectDoesNotExist:
-            messages.warning(self.request, "There are no items in your cart.")
+            messages.warning(self.request, "You have no items in your cart.")
             return redirect("core:index")
+
 
 def apply_coupon(self):
     form = self.POST
     coupon_code = form.get('coupon_code')
-    print("test is working")
     try:
         coupon = Coupon.objects.get(code=coupon_code, active=True, valid_from__lte=timezone.now(), valid_to__gte=timezone.now())
         order = Order.objects.get(user=self.user, is_ordered=False)
@@ -93,30 +219,34 @@ def apply_coupon(self):
         messages.warning(self, "You do not have an active order")
     return redirect("core:cart")
 
-
-
 @login_required
+@require_POST
 def add_to_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
+   
+    data = json.loads(request.body)
+    quantity = data.get('quantity')
+    quantity = int(quantity) if quantity.isdigit() else 1
     order_qs = Order.objects.filter(user=request.user, is_ordered=False)
+
     if order_qs.exists():
         order = order_qs.first()
         order_item_qs = OrderItem.objects.filter(item=item, order=order)
+
         if order_item_qs.exists():
             order_item = order_item_qs.first()
-            order_item.quantity += 1
+            order_item.quantity += quantity  # Increment by the specified quantity
             order_item.save()
-            messages.info(request, "This item quantity was increaced.")
+            messages.info(request, "The quantity of this item was increased.")
         else:
-            order_item = OrderItem.objects.create(item=item, order=order)
-            messages.info(request, "This item was add it to your cart.")
+            order_item = OrderItem.objects.create(item=item, order=order, quantity=quantity)
+            messages.info(request, f"This item was added to your cart with quantity of {quantity}.")
     else:
         order = Order.objects.create(user=request.user)
-        order_item = OrderItem.objects.create(item=item, order=order, user=request.user)
-        order.items.add(order_item.item)  
-        messages.info(request, "This item add it to your cart.")
+        order_item = OrderItem.objects.create(item=item, order=order, quantity=quantity)
+        order.items.add(order_item)
 
-    return redirect("core:product-detail", slug=slug)
+    return JsonResponse({'status': 'success', 'message': 'Item quantity updated.', 'quantity':quantity})
 
 @login_required
 def remove_from_cart(request, slug):
@@ -127,18 +257,35 @@ def remove_from_cart(request, slug):
         order_item_qs = OrderItem.objects.filter(item=item, order=order)
         if order_item_qs.exists():
             order_item = order_item_qs.first()
-            if order_item.quantity > 1:
-                order_item.quantity -= 1
-                order_item.save()
-                messages.info(request, "This item quantity was decreased.")
-            else:
-                order_item.delete()
-                messages.info(request, "This item was removed from your cart.")
+            order_item.delete()
+            messages.info(request, "This item was removed from your cart.")
         else:
             messages.warning(request, "This item was not in your cart.")
     else:
         messages.warning(request, "You do not have an active order.")
     return redirect("core:product-detail", slug=slug)
+
+# @login_required
+# def remove_from_cart(request, slug):
+#     item = get_object_or_404(Item, slug=slug)
+#     order_qs = Order.objects.filter(user=request.user, is_ordered=False)
+#     if order_qs.exists():
+#         order = order_qs.first()
+#         order_item_qs = OrderItem.objects.filter(item=item, order=order)
+#         if order_item_qs.exists():
+#             order_item = order_item_qs.first()
+#             if order_item.quantity > 1:
+#                 order_item.quantity -= 1
+#                 order_item.save()
+#                 messages.info(request, "This item quantity was decreased.")
+#             else:
+#                 order_item.delete()
+#                 messages.info(request, "This item was removed from your cart.")
+#         else:
+#             messages.warning(request, "This item was not in your cart.")
+#     else:
+#         messages.warning(request, "You do not have an active order.")
+#     return redirect("core:product-detail", slug=slug)
 
 # adding the Remove complete from cart
 def remove_completely_from_cart(request, slug):
@@ -172,34 +319,58 @@ def genterate_random_ref_code():
 class CheckoutView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
         form = CheckoutForm()
+        try:
+            order = Order.objects.get(user=self.request.user, is_ordered=False)
+            order_items = OrderItem.objects.filter(order__user=self.request.user, order__is_ordered=False)
+            
+            # Check if there are any items in the order
+            if not order_items.exists():
+                messages.warning(self.request, "Your cart is empty. Please add items before proceeding to checkout.")
+                return redirect("core:cart")  # Redirect to cart if no items
+            
+            default_billing_address = Address.objects.filter(
+                user=self.request.user,
+                address_type='B',
+                default=True
+            ).first()
 
-        order_items = OrderItem.objects.filter(order__user=self.request.user, order__is_ordered=False)
-        default_billing_address = Address.objects.filter(
-            user=self.request.user,
-            address_type='B',
-            default=True
-        ).first()
+            default_shipping_address = Address.objects.filter(
+                user=self.request.user,
+                address_type='S',
+                default=True
+            ).first()
 
-        default_shipping_address = Address.objects.filter(
-            user=self.request.user,
-            address_type='S',
-            default=True
-        ).first()
+            # Add the logic for savings and coupon discount
+            if order.coupon:  
+                coupon_discount_percentage = order.coupon.discount  
+            else:
+                coupon_discount_percentage = 0
 
-        subtotal = sum([item.get_final_price() for item in order_items])
-        shipping = 0.00  # Define your shipping logic here
-        order_total = subtotal
+            subtotal = sum([item.get_total_cost() for item in order_items])
+            saving = sum([item.get_total_discount() for item in order_items])
+            shipping = 0
+            subtotal_after_saving = subtotal - saving
+            coupon_discount = (subtotal_after_saving * coupon_discount_percentage) / 100
+            order_total = subtotal_after_saving - coupon_discount
 
-        context = {
-            'form': form,
-            'order_items': order_items,
-            'subtotal': f"${subtotal:.2f}",
-            'shipping': f"${shipping:.2f}",
-            'order_total': f"${order_total:.2f}",
-            'default_billing_address': default_billing_address,
-            'default_shipping_address': default_shipping_address,
-        }
-        return render(self.request, 'core/checkout.html', context)
+            subtotal = sum([item.get_final_price() for item in order_items])
+            
+            context = {
+                'form': form,
+                'order_items': order_items,
+                'subtotal': f"${subtotal:.2f}",
+                'saving': f"${saving:.2f}",
+                'coupon_discount': coupon_discount,
+                'coupon_discount_percentage': coupon_discount_percentage,
+                'shipping': f"${shipping:.2f}",
+                'order_total': f"${order_total:.2f}",
+                'default_billing_address': default_billing_address,
+                'default_shipping_address': default_shipping_address,
+            }
+            return render(self.request, 'core/checkout.html', context)
+        except ObjectDoesNotExist:
+            messages.warning(self.request, "You do not have an active order")
+            return redirect("core:cart")
 
     def post(self, *args, **kwargs):
         form = CheckoutForm(self.request.POST or None)
@@ -283,7 +454,6 @@ class CheckoutView(LoginRequiredMixin, View):
                 else:
                     return redirect('core:order-complete')
             messages.warning(self.request, "There was an error with your form. Please try again.")
-            print(form.errors)
             return redirect('core:checkout')
         except ObjectDoesNotExist:
             messages.warning(self.request, "You do not have an order")

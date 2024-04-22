@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block head_title %} All Products {% endblock head_title %}
+{% block head_title %} Search Results {% endblock head_title %}
 
 {% block content%} 
 	<div class="breadcrumbs">
 		<div class="container">
 			<div class="row">
 				<div class="col">
-					<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>All products</span></p>
+					<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>Search Results</span></p>
 				</div>
 			</div>
 		</div>
@@ -18,9 +18,10 @@
 		<div class="container">
 			<div class="row">
 				<div class="col-sm-8 offset-sm-2 text-center colorlib-heading colorlib-heading-sm">
-					<h2>View All Products</h2>
+					<h2>View Search Results</h2>
 				</div>
 			</div>
+			{% if items %}
 			<div class="row row-pb-md">
 				{% for item in items %}
 				<div class="col-lg-3 mb-4 text-center">
@@ -43,7 +44,6 @@
 				</div>
 				{% endfor %}
 			</div>
-			
 			<div class="row">
 				<div class="col-md-12 text-center">
 					<div class="block-27">
@@ -72,6 +72,9 @@
 				</div>
 				</div>
 			</div>
+			{% else %}
+			<h3 class="text-center">No results found for "{{ query }}"</h3>
+			{% endif %}
 		</div>
 	</div>
 {% endblock %}

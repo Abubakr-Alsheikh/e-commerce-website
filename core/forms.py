@@ -1,7 +1,9 @@
 from django import forms
 from django_countries.fields import CountryField
 from django_countries.widgets import CountrySelectWidget
-from .models import Refund, Address
+from .models import Refund, Address, Review
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Submit
 
 # class CheckoutForm(forms.Form):
 #     # Billing Address Fields
@@ -226,6 +228,18 @@ class CheckoutForm(forms.Form):
     #             self.add_error('shipping_zip_code', 'This field is required.')
 
     #     return cleaned_data
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ['rating', 'comment']
+
+    def __init__(self, *args, **kwargs):
+        super(ReviewForm, self).__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.add_input(Submit('submit', 'Submit Review'))
 
 class RefundForm(forms.ModelForm):
     class Meta:

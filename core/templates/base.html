@@ -8,7 +8,6 @@
     </title>
     {% block extra_head %}
     {% endblock extra_head %}
-    <title>Footwear - Free Bootstrap 4 Template by Colorlib</title>
     <meta charset="utf-8" />
     <meta
       name="viewport"
@@ -23,6 +22,8 @@
       href="https://fonts.googleapis.com/css?family=Rokkitt:100,300,400,700"
       rel="stylesheet"
     />
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
 
     <!-- Animate.css -->
     <link rel="stylesheet" href="{% static 'css/animate.css' %}" />
@@ -59,7 +60,7 @@
     <div id="page">
         {% include 'nav.html' %}
 
-        {% if messages %}
+        <!-- {% if messages %}
         <ul class="messages">
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -70,7 +71,7 @@
               </div>
             {% endfor %}
         </ul>
-        {% endif %}
+        {% endif %} -->
 
         {% block content %} 
         {% endblock %}
@@ -142,9 +143,10 @@
                     <div class="col-sm-12 text-center">
                         <p>
                             <span><!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
-    Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="icon-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
-    <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. --></span> 
+                            Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="icon-heart" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
+                            <!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. --></span> 
                             <span class="block">Demo Images: <a href="http://unsplash.co/" target="_blank">Unsplash</a> , <a href="http://pexels.com/" target="_blank">Pexels.com</a></span>
+                            <span><br>Developed by: <a href="https://abubakr-alsheikh.github.io/my-portfolio/" style="text-decoration: underline;">Abubakr Alsheikh</a> </span>
                         </p>
                     </div>
                 </div>
@@ -152,16 +154,50 @@
         </footer>
     </div>
 
+    <!-- <button type="button" class="btn btn-primary" id="liveToastBtn">Show live toast</button>
+    <div aria-live="polite" aria-atomic="true" style="position: fixed;bottom: 20px;left: 20px;">
+        <div class="toast" >
+          <div class="toast-header">
+            <strong class="mr-auto">Bootstrap</strong>
+            <small>11 mins ago</small>
+            <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="toast-body">
+            Hello, world! This is a toast message.
+          </div>
+        </div>
+      </div> -->
+
+      {% if messages %}
+        <div class="toast-container" aria-live="polite" aria-atomic="true" style="position: fixed;top: 20px;right: 20px;max-width: 400px;">
+            {% for message in messages %}
+            <div class="toast" style="min-width: 300px;">
+                <div class="toast-header">
+                  <strong class="mr-auto text-{{message.tags}}">{{message.tags}}</strong>
+                  <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="toast-body">
+                  {{message}}
+                </div>
+              </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+      
+      
     <div class="gototop js-top">
         <a href="#" class="js-gotop"><i class="ion-ios-arrow-up"></i></a>
     </div>
-
     <!-- jQuery -->
     <script src="{% static 'js/jquery.min.js' %}"></script>
-    <!-- popper -->
-    <script src="{% static 'js/popper.min.js' %}"></script>
     <!-- bootstrap 4.1 -->
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <!-- popper -->
+    <script src="{% static 'js/popper.min.js' %}"></script>
     <!-- jQuery easing -->
     <script src="{% static 'js/jquery.easing.1.3.js' %}"></script>
     <!-- Waypoints -->
@@ -179,7 +215,6 @@
     <script src="{% static 'js/jquery.stellar.min.js' %}"></script>
     <!-- Main -->
     <script src="{% static 'js/main.js' %}"></script>
-    
 
     {% block extra_body %}
     {% endblock extra_body %}

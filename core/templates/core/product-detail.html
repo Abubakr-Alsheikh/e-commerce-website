@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
+{% load custom_filters %}
+{% load crispy_forms_tags %}
 
 {% block content%}
 <div class="breadcrumbs">
 	<div class="container">
 		<div class="row">
 			<div class="col">
-				<p class="bread"><span><a href="/index">Home</a></span> / <span>Product Details</span> / <span>{{item}}</span></p>
+				<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>Product Details</span> / <span>{{item}}</span></p>
 			</div>
 		</div>
 	</div>
@@ -17,34 +19,11 @@
 	<div class="container">
 		<div class="row row-pb-lg product-detail-wrap">
 			<div class="col-sm-8">
-				<div class="owl-carousel">
-					<div class="item">
-						<div class="product-entry border">
-							<a href="#" class="prod-img">
-								<img src="{{ item.image.url }}" class="img-fluid" alt="{{ item.image.title }}">
-							</a>
-						</div>
-					</div>
-					<div class="item">
-						<div class="product-entry border">
-							<a href="#" class="prod-img">
-								<img src="{% static 'images/item-2.jpg' %}" class="img-fluid" alt="Free html5 bootstrap 4 template">
-							</a>
-						</div>
-					</div>
-					<div class="item">
-						<div class="product-entry border">
-							<a href="#" class="prod-img">
-								<img src="{% static 'images/item-3.jpg' %}" class="img-fluid" alt="Free html5 bootstrap 4 template">
-							</a>
-						</div>
-					</div>
-					<div class="item">
-						<div class="product-entry border">
-							<a href="#" class="prod-img">
-								<img src="{% static 'images/item-4.jpg' %}" class="img-fluid" alt="Free html5 bootstrap 4 template">
-							</a>
-						</div>
+				<div class="item">
+					<div class="product-entry border">
+						<a href="#" class="prod-img">
+							<img src="{{ item.image.url }}" class="img-fluid" alt="{{ item.image.title }}">
+						</a>
 					</div>
 				</div>
 			</div>
@@ -52,74 +31,101 @@
 				<div class="product-desc">
 					<h3>{{item}}</h3>
 					<p class="price">
-						<span>{% if item.discount_price %}
+						<span>
+							{% if item.discount_price %}
 							<del>${{item.price}}</del> ${{item.discount_price}}
 							{% else %}
 							${{item.price}}
-							{% endif %}</span> 
+							{% endif %}
+						</span>
 						<span class="rate">
-							<i class="icon-star-full"></i>
-							<i class="icon-star-full"></i>
-							<i class="icon-star-full"></i>
-							<i class="icon-star-full"></i>
-							<i class="icon-star-half"></i>
-							(74 Rating)
+							<span>
+								{% for star in 1|to:full_stars %}
+									<i class="icon-star-full"></i>
+								{% endfor %}
+								{% for star in 1|to:half_star %}
+									<i class="icon-star-half"></i>
+								{% endfor %}
+								{% for star in 1|to:empty_stars %}
+									<i class="icon-star-empty"></i>
+								{% endfor %}
+								({{ number_of_reviews }} Rating)
+							</span>
 						</span>
 					</p>
-					<p>{{item.description}}</p>
 					<div class="size-wrap">
-						<div class="block-26 mb-2">
+						<!-- <div class="block-26 mb-2">
 							<h4>Size</h4>
-					   <ul>
-						  <li><a href="#">7</a></li>
-						  <li><a href="#">7.5</a></li>
-						  <li><a href="#">8</a></li>
-						  <li><a href="#">8.5</a></li>
-						  <li><a href="#">9</a></li>
-						  <li><a href="#">9.5</a></li>
-						  <li><a href="#">10</a></li>
-						  <li><a href="#">10.5</a></li>
-						  <li><a href="#">11</a></li>
-						  <li><a href="#">11.5</a></li>
-						  <li><a href="#">12</a></li>
-						  <li><a href="#">12.5</a></li>
-						  <li><a href="#">13</a></li>
-						  <li><a href="#">13.5</a></li>
-						  <li><a href="#">14</a></li>
-					   </ul>
-					</div>
-					<div class="block-26 mb-4">
-							<h4>Width</h4>
-					   <ul>
-						  <li><a href="#">M</a></li>
-						  <li><a href="#">W</a></li>
-					   </ul>
-					</div>
-					</div>
-			 <div class="input-group mb-4">
-				 <span class="input-group-btn">
-					<button type="button" class="quantity-left-minus btn"  data-type="minus" data-field="">
-				   <i class="icon-minus2"></i>
-					</button>
-					</span>
-				 <input type="text" id="quantity" name="quantity" class="form-control input-number" value="1" min="1" max="100">
-				 <span class="input-group-btn ml-1">
-					<button type="button" class="quantity-right-plus btn" data-type="plus" data-field="">
-					 <i class="icon-plus2"></i>
-				 </button>
-				 </span>
-			  </div>
-			  <div class="row">
-				  <div class="col-sm-12 text-center">
-							<p class="addtocart"><a href="{{ item.get_add_to_cart_url }}" class="btn btn-primary btn-addtocart"><i class="icon-shopping-cart"></i> Add to Cart</a></p>
-							<p class="addtocart"><a href="{{ item.get_reomve_from_cart_url }}" class="btn btn-danger btn-addtocart"><i class="icon-shopping-cart"></i> Remove from Cart</a></p>
+							<ul>
+								<li><a href="#">7</a></li>
+								<li><a href="#">7.5</a></li>
+								<li><a href="#">8</a></li>
+								<li><a href="#">8.5</a></li>
+								<li><a href="#">9</a></li>
+								<li><a href="#">9.5</a></li>
+								<li><a href="#">10</a></li>
+								<li><a href="#">10.5</a></li>
+								<li><a href="#">11</a></li>
+								<li><a href="#">11.5</a></li>
+								<li><a href="#">12</a></li>
+								<li><a href="#">12.5</a></li>
+								<li><a href="#">13</a></li>
+								<li><a href="#">13.5</a></li>
+								<li><a href="#">14</a></li>
+							</ul>
 						</div>
+						<div class="block-26 mb-4">
+							<h4>Width</h4>
+							<ul>
+								<li><a href="#">M</a></li>
+								<li><a href="#">W</a></li>
+							</ul>
+						</div> -->
+					</div>
+				{% if request.user.is_authenticated %}
+					{% if not is_in_cart %}
+					<div class="input-group mb-4">
+						<span class="input-group-btn">
+							<button type="button" class="quantity-left-minus btn" data-type="minus" data-field="">
+								<i class="icon-minus2"></i>
+							</button>
+						</span>
+						<input type="number" id="quantity" name="quantity" class="form-control input-number" value="1" min="1" max="100">
+						<span class="input-group-btn ml-1">
+							<button type="button" class="quantity-right-plus btn" data-type="plus" data-field="">
+								<i class="icon-plus2"></i>
+							</button>
+						</span>
+					</div>
+					{% endif %}
+
+				<div class="row">
+					<div class="col-sm-12 text-center">
+						{% if not is_in_cart %}
+							<!-- Display "Add to Cart" button if the item is not in the cart -->
+							<p class="addtocart">
+								<a href="{{ item.get_add_to_cart_url }}" class="btn btn-primary btn-addtocart">
+									<i class="icon-shopping-cart"></i> Add to Cart
+								</a>
+							</p>
+						{% else %}
+							<!-- Display "Remove from Cart" button if the item is already in the cart -->
+							<p class="removetocart">
+								<a href="{{ item.get_remove_from_cart_url }}" class="btn btn-danger btn-addtocart">
+									<i class="icon-shopping-cart"></i> Remove from Cart
+								</a>
+							</p>
+						{% endif %}
 					</div>
 				</div>
+				{% else %}
+				<h4 style="background-color: rgb(214, 214, 214); padding: 8px;">Log in to add this item to your cart.</h4>
+				{% endif %}
+
 			</div>
 		</div>
 
-		<div class="row">
+		<div class="row mt-5" style="width: 100%;">
 			<div class="col-sm-12">
 				<div class="row">
 					<div class="col-md-12 pills">
@@ -127,169 +133,200 @@
 						  <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
 
 							<li class="nav-item">
-							  <a class="nav-link active" id="pills-description-tab" data-toggle="pill" href="#pills-description" role="tab" aria-controls="pills-description" aria-expanded="true">Description</a>
+							  <a class="nav-link " id="pills-description-tab" data-toggle="pill" href="#pills-description" role="tab" aria-controls="pills-description" aria-expanded="true">Description</a>
 							</li>
 							<li class="nav-item">
-							  <a class="nav-link" id="pills-manufacturer-tab" data-toggle="pill" href="#pills-manufacturer" role="tab" aria-controls="pills-manufacturer" aria-expanded="true">Manufacturer</a>
-							</li>
-							<li class="nav-item">
-							  <a class="nav-link" id="pills-review-tab" data-toggle="pill" href="#pills-review" role="tab" aria-controls="pills-review" aria-expanded="true">Review</a>
+							  <a class="nav-link active" id="pills-review-tab" data-toggle="pill" href="#pills-review" role="tab" aria-controls="pills-review" aria-expanded="true">Review</a>
 							</li>
 						  </ul>
 
 						  <div class="tab-content" id="pills-tabContent">
-							<div class="tab-pane border fade show active" id="pills-description" role="tabpanel" aria-labelledby="pills-description-tab">
-							  <p>Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small line of blind text by the name of Lorem Ipsum decided to leave for the far World of Grammar.</p>
-								<p>When she reached the first hills of the Italic Mountains, she had a last view back on the skyline of her hometown Bookmarksgrove, the headline of Alphabet Village and the subline of her own road, the Line Lane. Pityful a rethoric question ran over her cheek, then she continued her way.</p>
-								<ul>
-									<li>The Big Oxmox advised her not to do so</li>
-									<li>Because there were thousands of bad Commas</li>
-									<li>Wild Question Marks and devious Semikoli</li>
-									<li>She packed her seven versalia</li>
-									<li>tial into the belt and made herself on the way.</li>
-								</ul>
+							<div class="tab-pane border fade " id="pills-description" role="tabpanel" aria-labelledby="pills-description-tab">
+								{{item.description}}
 							</div>
 
-							<div class="tab-pane border fade" id="pills-manufacturer" role="tabpanel" aria-labelledby="pills-manufacturer-tab">
-							  <p>Even the all-powerful Pointing has no control about the blind texts it is an almost unorthographic life One day however a small line of blind text by the name of Lorem Ipsum decided to leave for the far World of Grammar.</p>
-								<p>When she reached the first hills of the Italic Mountains, she had a last view back on the skyline of her hometown Bookmarksgrove, the headline of Alphabet Village and the subline of her own road, the Line Lane. Pityful a rethoric question ran over her cheek, then she continued her way.</p>
-							</div>
-
-							<div class="tab-pane border fade" id="pills-review" role="tabpanel" aria-labelledby="pills-review-tab">
+							<div class="tab-pane border fade show active" id="pills-review" role="tabpanel" aria-labelledby="pills-review-tab">
 							  <div class="row">
 								   <div class="col-md-8">
-									   <h3 class="head">23 Reviews</h3>
-									   <div class="review">
-										   <div class="user-img" style="background-image: url(images/person1.jpg)"></div>
-										   <div class="desc">
-											   <h4>
-												   <span class="text-left">Jacob Webb</span>
-												   <span class="text-right">14 March 2018</span>
-											   </h4>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-half"></i>
-													   <i class="icon-star-empty"></i>
-												   </span>
-												   <span class="text-right"><a href="#" class="reply"><i class="icon-reply"></i></a></span>
-											   </p>
-											   <p>When she reached the first hills of the Italic Mountains, she had a last view back on the skyline of her hometown Bookmarksgrov</p>
-										   </div>
-									   </div>
-									   <div class="review">
-										   <div class="user-img" style="background-image: url(images/person2.jpg)"></div>
-										   <div class="desc">
-											   <h4>
-												   <span class="text-left">Jacob Webb</span>
-												   <span class="text-right">14 March 2018</span>
-											   </h4>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-half"></i>
-													   <i class="icon-star-empty"></i>
-												   </span>
-												   <span class="text-right"><a href="#" class="reply"><i class="icon-reply"></i></a></span>
-											   </p>
-											   <p>When she reached the first hills of the Italic Mountains, she had a last view back on the skyline of her hometown Bookmarksgrov</p>
-										   </div>
-									   </div>
-									   <div class="review">
-										   <div class="user-img" style="background-image: url(images/person3.jpg)"></div>
-										   <div class="desc">
-											   <h4>
-												   <span class="text-left">Jacob Webb</span>
-												   <span class="text-right">14 March 2018</span>
-											   </h4>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-half"></i>
-													   <i class="icon-star-empty"></i>
-												   </span>
-												   <span class="text-right"><a href="#" class="reply"><i class="icon-reply"></i></a></span>
-											   </p>
-											   <p>When she reached the first hills of the Italic Mountains, she had a last view back on the skyline of her hometown Bookmarksgrov</p>
-										   </div>
-									   </div>
+										{% if request.user.is_authenticated %}
+										<form  method="post">
+											{% csrf_token %}
+											{% crispy review_form %}
+										</form>
+										{% else %}
+										<h2>Log in to add your review.</h2>
+										{% endif %}
+									   <h3 class="head">{{number_of_reviews}} Reviews</h3>
+									   {% for review in page_obj %}
+										<div class="review">
+											<div class="user-img" style="background-image: url({% static 'images/user.jpg' %})"></div>
+											<div class="desc">
+												<h4>
+													<span class="text-left">{{ review.user }}</span>
+													<span class="text-right">{{ review.date_added|date:"d M Y" }}</span>
+												</h4>
+												<p class="star">
+													<span>
+														{% for star in 1|to:review.rating %}
+															<i class="icon-star-full"></i>
+														{% endfor %}
+														{% for star in review.rating|to:4 %}
+															<i class="icon-star-empty"></i>
+														{% endfor %}
+													</span>
+													<span class="text-right"><a href="#" class="reply"><i class="icon-reply"></i></a></span>
+												</p>
+												<p>{{ review.comment }}</p>
+											</div>
+										</div>
+										{% empty %}
+										<h2 class="text-center">No Reviews Yet</h2>
+										{% endfor %}
+										
+										<!-- Add the pagination layout below the reviews -->
+										{% include 'pagination.html' with items=page_obj %}
 								   </div>
 								   <div class="col-md-4">
-									   <div class="rating-wrap">
-										   <h3 class="head">Give a Review</h3>
-										   <div class="wrap">
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   (98%)
-												   </span>
-												   <span>20 Reviews</span>
-											   </p>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-empty"></i>
-													   (85%)
-												   </span>
-												   <span>10 Reviews</span>
-											   </p>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   (70%)
-												   </span>
-												   <span>5 Reviews</span>
-											   </p>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   (10%)
-												   </span>
-												   <span>0 Reviews</span>
-											   </p>
-											   <p class="star">
-												   <span>
-													   <i class="icon-star-full"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   <i class="icon-star-empty"></i>
-													   (0%)
-												   </span>
-												   <span>0 Reviews</span>
-											   </p>
-										   </div>
-									   </div>
+									<div class="rating-wrap">
+										<h3 class="head">Give a Review</h3>
+										<div class="wrap">
+											<p class="star">
+												<span>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													({{ 5_stars_percentage }})
+												</span>
+												<span>{{ 5_stars }} Reviews</span>
+											</p>
+											<p class="star">
+												<span>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-empty"></i>
+													({{ 4_stars_percentage }})
+												</span>
+												<span>{{ 4_stars }} Reviews</span>
+											</p>
+											<p class="star">
+												<span>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													({{ 3_stars_percentage }})
+												</span>
+												<span>{{ 3_stars }} Reviews</span>
+											</p>
+											<p class="star">
+												<span>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													({{ 2_stars_percentage }})
+												</span>
+												<span>{{ 2_stars }} Reviews</span>
+											</p>
+											<p class="star">
+												<span>
+													<i class="icon-star-full"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													<i class="icon-star-empty"></i>
+													({{ 1_star_percentage }})
+												</span>
+												<span>{{ 1_star }} Reviews</span>
+											</p>
+										</div>
+									</div>
 								   </div>
 							   </div>
 							</div>
 						  </div>
 						</div>
-				 </div>
+				 	</div>
 				</div>
 			</div>
 		</div>
 	</div>
 </div>
 {% endblock %}
+{% block extra_body %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var quantityInput = document.getElementById('quantity');
+	addToCartButton = document.querySelector(".btn-addtocart")
+    
+    // Decrease quantity by 1 if the left minus button is clicked
+    document.querySelector('.quantity-left-minus').addEventListener('click', function() {
+        var currentQuantity = parseInt(quantityInput.value, 10);
+        quantityInput.value = currentQuantity > 1 ? currentQuantity - 1 : 1;
+		ShowToast("added","info")
+    });
+    
+    // Increase quantity by 1 if the right plus button is clicked
+    document.querySelector('.quantity-right-plus').addEventListener('click', function() {
+        var currentQuantity = parseInt(quantityInput.value, 10);
+        var maxQuantity = parseInt(quantityInput.max, 10);
+        quantityInput.value = currentQuantity < maxQuantity ? currentQuantity + 1 : maxQuantity;
+    });
+	// Handle form submission
+	addToCartButton.addEventListener('click', function(event) {
+        event.preventDefault(); // Prevent the default link behavior
+        var quantity = quantityInput.value;
+        var addOrRemoveUrl = this.getAttribute('href'); // Get the URL for adding/removing from cart
+
+        // Send the quantity value to the add_to_cart function via AJAX
+        fetch(addOrRemoveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken') // Function to get CSRF token from cookies
+            },
+            body: JSON.stringify({ quantity: quantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Handle success (e.g., display a success message)
+                console.log(data.message, data.quantity);
+				location.reload();
+            } else {
+                // Handle error (e.g., display an error message)
+                console.error('Error updating item quantity:', data.message);
+				location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('An error occurred:', error);
+			location.reload();
+        });
+    });
+});
+
+// Function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+</script>
+{% endblock extra_body %}

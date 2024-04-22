@@ -1,92 +1,203 @@
-{% load cart_template_tags %}
-{% load active_coupons_tags %}
+{% load cart_template_tags %} 
+{% load active_coupons_tags %} 
+{% block extra_head %}
+<style>
+  .search-wrap {
+    position: relative;
+  }
+  .search-results {
+    position: absolute;
+    top: 100%; /* Position directly below the search input */
+    left: 0;
+    right: 0;
+    z-index: 1000; /* Ensure it's above other content */
+  }
+  .search-results .card {
+    text-decoration: underline;
+  }
+  .search-results .card-body {
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+</style>
+
+{% endblock extra_head %}
 
 <nav class="colorlib-nav" role="navigation">
-    <div class="top-menu">
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-7 col-md-9">
-                    <div id="colorlib-logo"><a href="/index">Footwear</a></div>
-                </div>
-                <div class="col-sm-5 col-md-3">
-                <form action="#" class="search-wrap">
-                    <div class="form-group">
-                        <input type="search" class="form-control search" placeholder="Search">
-                        <button class="btn btn-primary submit-search text-center" type="submit"><i class="icon-search"></i></button>
-                    </div>
-                </form>
-                </div>
+  <div class="top-menu">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-7 col-md-9">
+          <div id="colorlib-logo">
+            <a href="{% url 'core:index' %}">Footwear</a>
+          </div>
+        </div>
+        <div class="col-sm-5 col-md-3">
+          <form action="{% url 'core:search-results' %}" class="search-wrap">
+            <div class="form-group">
+              <input
+                type="search"
+                class="form-control search"
+                placeholder="Search"
+                name="q"
+              />
+              <button
+                class="btn btn-primary submit-search text-center"
+                type="submit"
+              >
+                <i class="icon-search"></i>
+              </button>
             </div>
-            <div class="row">
-                <div class="col-sm-12 text-left menu-1">
-                    <ul>
-                        <li class="active"><a href="/index">Home</a></li>
-                        <li class="has-dropdown">
-                            <a href="{% url 'core:men' %}">Men</a>
-                            <!-- <ul class="dropdown">
+            <!-- Container for displaying search results -->
+            <div class="search-results"></div>
+          </form>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-sm-12 text-left menu-1">
+          <ul>
+            <li class="active"><a href="{% url 'core:index' %}">Home</a></li>
+            <li>
+              <a href="{% url 'core:men' %}">Men</a>
+              <!-- <ul class="dropdown">
                                 <li><a href="/checkout">Checkout</a></li>
                                 <li><a href="/order-complete">Order Complete</a></li>
                                 <li><a href="add-to-wishlist.html">Wishlist</a></li>
                             </ul> -->
-                        </li>
-                        <li><a href="{% url 'core:women' %}">Women</a></li>
-                        {% if request.user.is_authenticated %}
-                        <li><a href="{% url 'core:request-refund' %}">Request Refund</a></li>
-                        <li class="cart"><a href="{% url 'account_logout' %}">Log out</a></li>
-                        <li class="cart"><a href="{% url 'core:cart' %}"><i class="icon-shopping-cart"></i> Cart [{{ request.user|cart_items_count }}]</a></li>
-                        {% else %}
-                        <li class="cart"><a href="{% url 'account_login' %}"><i class="icon-user-check2"></i> Login</a></li>
-                        <li class="cart"><a href="{% url 'account_signup' %}"><i class="icon-user-plus2"></i> Sign up</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
+            </li>
+            <li><a href="{% url 'core:women' %}">Women</a></li>
+            {% if request.user.is_authenticated %}
+            <li>
+              <a href="{% url 'core:request-refund' %}">Request Refund</a>
+            </li>
+            <li class="cart">
+              <a href="{% url 'account_logout' %}">Log out</a>
+            </li>
+            <li class="cart">
+              <a href="{% url 'core:cart' %}"
+                ><i class="icon-shopping-cart"></i> Cart [{{request.user|cart_items_count }}]</a
+              >
+            </li>
+            {% else %}
+            <li class="cart">
+              <a href="{% url 'account_login' %}"
+                ><i class="icon-user-check2"></i> Login</a
+              >
+            </li>
+            <li class="cart">
+              <a href="{% url 'account_signup' %}"
+                ><i class="icon-user-plus2"></i> Sign up</a
+              >
+            </li>
+            {% endif %}
+          </ul>
         </div>
+      </div>
     </div>
-    <!-- <div class="sale">
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-8 offset-sm-2 text-center">
-                    <div class="row">
-                        <div class="owl-carousel2">
-                            <div class="item">
-                                <div class="col">
-                                    <h3><a href="#">25% off (Almost) Everything! Use Code: Summer Sale</a></h3>
-                                </div>
-                            </div>
-                            <div class="item">
-                                <div class="col">
-                                    <h3><a href="#">Our biggest sale yet 50% off all summer shoes</a></h3>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+  </div>
+  {% get_active_coupons as active_coupons %} {% if active_coupons %}
+  <div class="sale">
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-8 offset-sm-2 text-center">
+          <div class="row">
+            <div class="owl-carousel2">
+              {% for coupon in active_coupons %}
+              <div class="item">
+                <div class="col">
+                  <h3>
+                    <a
+                      href="{% url 'core:cart' %}?coupon_code={{ coupon.code }}"
+                    >
+                      Use this code: {{ coupon.code }} ({{ coupon.discount }}%
+                      off, valid until {{ coupon.valid_to }})
+                    </a>
+                  </h3>
                 </div>
+              </div>
+              {% endfor %}
             </div>
+          </div>
         </div>
-    </div> -->
-    {% get_active_coupons as active_coupons %}
-    {% if active_coupons %}
-    <div class="sale">
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-8 offset-sm-2 text-center">
-                    <div class="row">
-                        <div class="owl-carousel2">
-                            {% for coupon in active_coupons %}
-                            <div class="item">
-                                <div class="col">
-                                    <h3><a href="{% url 'core:cart' %}?coupon_code={{ coupon.code }}">
-                                    Use this code: {{ coupon.code }} ({{ coupon.discount }}% off, valid until {{ coupon.valid_to }})
-                                    </a></h3>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
-    {% endif %}
+  </div>
+  {% endif %}
 </nav>
+
+{% block extra_body %}
+<script>
+  document.addEventListener("DOMContentLoaded", (event) => {
+    // Get all 'a' elements
+    var links = document.querySelectorAll("ul li a");
+
+    // Remove 'active' class from all links
+    links.forEach((link) => link.parentNode.classList.remove("active"));
+
+    // Add 'active' class to the current page's link
+    links.forEach((link) => {
+      if (link.href === window.location.href) {
+        link.parentNode.classList.add("active");
+      }
+    });
+
+    ////// Search
+    const searchInput = document.querySelector(".search");
+    const resultsContainer = document.querySelector(".search-results");
+
+    searchInput.addEventListener("keyup", function () {
+      const query = searchInput.value;
+
+      if (query != "") {
+        // Start searching after 2 characters
+        fetch(`/search/?q=${query}`)
+          .then((response) => response.json())
+          .then((data) => {
+            // Clear previous results
+            resultsContainer.innerHTML = "";
+
+            // Append new results
+            data.results.forEach((item) => {
+              const card = document.createElement("div");
+              card.className = "card";
+              const cardBody = document.createElement("div");
+              cardBody.className = "card-body";
+              const link = document.createElement("a");
+              link.href = item.url;
+              link.textContent = item.name;
+              cardBody.appendChild(link);
+              card.appendChild(cardBody);
+              resultsContainer.appendChild(card);
+            });
+          })
+          .catch((error) => console.error(error));
+      } else {
+        resultsContainer.innerHTML = "";
+      }
+    });
+    document.addEventListener("mousedown", (e) => {
+      if(!e.target.closest(".search-results")) {
+        resultsContainer.innerHTML = "";
+      }
+    });
+    const searchForm = document.querySelector(".search-wrap");
+    searchForm.addEventListener("submit", function (event) {
+      if (!searchInput.value.trim()) {
+        event.preventDefault(); // Prevent form submission if the input is empty
+        // Optionally, alert the user or highlight the search input
+        alert("Please enter a search term.");
+      } else {
+        // If the input is not empty, proceed with the form submission
+        window.location.href = `/search-results/?q=${encodeURIComponent(
+          searchInput.value.trim()
+        )}`;
+      }
+    });
+  });
+</script>
+{% endblock extra_body %}

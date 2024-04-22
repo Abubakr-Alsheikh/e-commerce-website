@@ -284,7 +284,18 @@
 	};
 
 
+	var showTosat = function(){
+		$('.toast').addClass('show');
+		// hide the toast after 3 seconds
+		setTimeout(function(){
+			$('.toast').removeClass('show');
+		}, 4000);
+	}
 
+	$('.toast .close').on('click', function(){
+		$(this).closest('.toast').removeClass('show');
+	});
+	
 	
 	$(function(){
 		mobileMenuOutsideClick();
@@ -298,7 +309,8 @@
 		owlCrouselFeatureSlide();
 		parallax();
 		datePicker();
+		showTosat();
 	});
 
-
 }());
+

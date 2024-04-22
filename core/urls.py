@@ -16,13 +16,17 @@ from .views import (
     update_order_item_quantity,
     remove_completely_from_cart,
     apply_coupon,
-    refund_view
+    refund_view,
+    search_items,
+    SearchResultsView
 )
 
 app_name = 'core'
 urlpatterns = [
     path('', HomeView.as_view(), name='index'),
     path('index/', HomeView.as_view()),
+    path('search/', search_items, name='search_items'),
+    path('search-results/', SearchResultsView.as_view(), name='search-results'),
     path('men/', MenView.as_view(), name='men'),
     path('women/', WomenView.as_view(), name='women'),
     path('all-products/', AllProductsView.as_view(), name='all-products'),
