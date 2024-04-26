@@ -284,9 +284,9 @@
 	};
 
 
-	var showTosat = function(){
+	var showTosat = () => {
+		console.log("show");
 		$('.toast').addClass('show');
-		// hide the toast after 3 seconds
 		setTimeout(function(){
 			$('.toast').removeClass('show');
 		}, 4000);

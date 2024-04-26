@@ -3,6 +3,7 @@ from django.conf import settings
 from django.urls import reverse
 from django_countries.fields import CountryField
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.text import slugify
 
 CATEGORY_CHOICES = (
     ('M', 'Men'),
@@ -27,12 +28,22 @@ class Item(models.Model):
     description = models.TextField()
     available = models.BooleanField(default=True)
     category = models.CharField(max_length=1, choices=CATEGORY_CHOICES)
-    label = models.CharField(max_length=1, choices=LABEL_CHOICES)
-    slug = models.SlugField(unique=True)
+    label = models.CharField(max_length=1, choices=LABEL_CHOICES, null=True, blank=True)
+    slug = models.SlugField(unique=True, blank=True)
     image = models.ImageField(upload_to='item_images/', null=True, blank=True)
 
     def __str__(self):
         return self.title
+    
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.title)
+        original_slug = self.slug
+        count = 1
+        while Item.objects.filter(slug=self.slug).exists():
+            self.slug = original_slug + '-' + str(count)
+            count += 1
+        super().save(*args, **kwargs)
+
     
     def get_absolute_url(self):
         return reverse("core:product-detail",kwargs={
@@ -177,4 +188,4 @@ class Refund(models.Model):
     accepted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.pk}"
+        return f"{self.email} - Refund Requested for Order {self.ref_code}"

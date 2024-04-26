@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block head_title %} All Products {% endblock head_title %}
+{% block head_title %} All Orders {% endblock head_title %}
 
 {% block content%} 
 	<div class="breadcrumbs">
 		<div class="container">
 			<div class="row">
 				<div class="col">
-					<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>All products</span></p>
+					<p class="bread"><span><a href="{% url 'core:index'%}">Home</a></span> / <span>All Orders</span></p>
 				</div>
 			</div>
 		</div>
@@ -18,42 +18,56 @@
 		<div class="container">
 			<div class="row">
 				<div class="col-sm-8 offset-sm-2 text-center colorlib-heading colorlib-heading-sm">
-					<h2>View All Products</h2>
+					<h2>View All Orders</h2>
 				</div>
 			</div>
 			<div class="row row-pb-md">
-				{% for item in items %}
-				<div class="col-lg-3 mb-4 text-center">
-					<div class="product-entry border">
-						<a href="{{item.get_absolute_url}}" class="prod-img">
-							<img src="{{ item.image.url }}" class="img-fluid" alt="Free html5 bootstrap 4 template">
-						</a>
-						<div class="desc">
-							<span class="text-dark">{{item.get_category_display}}</span>
-							<h2><a href="{{item.get_absolute_url}}">{{item}}</a>
-								<span class="badge badge-pill bg-{{ item.get_label_display }} text-light m-1">
-									{% if item.label == 'P' %}
-										best-sells
-									{% elif item.label == 'S' %}
-										new
-									{% elif item.label == 'D' %}
-										big-discount
-									{% else %}
-										<!-- Handle other cases if needed -->
-									{% endif %}
-								</span>
-							</h2>
-							<span class="price">
-								{% if item.discount_price %}
-								<del>${{item.price}}</del> ${{item.discount_price}}
-								{% else %}
-								${{item.price}}
-								{% endif %}
-							</span>
-						</div>
-					</div>
-				</div>
-				{% endfor %}
+				<table class="table table-bordered">
+					<thead>
+						<tr>
+							<th>Ref Code</th>
+							<th>Ordered Date</th>
+							<th>Is Ordered</th>
+							<th scope="col">Items</th>
+      <th scope="col">Status</th>
+							<!-- Add more columns as needed -->
+						</tr>
+					</thead>
+					<tbody>
+						{% for order in user_orders %}
+							<tr>
+								<td>{{ order.ref_code }}</td>
+								<td>{{ order.ordered_date|date }}</td>
+								<td>{{ order.is_ordered }}</td>
+								<td>
+									<ul>
+									  {% for item in order.items.all %}
+										<li>{{ item.title }} - {% if item.discount_price %}
+											<del>${{ item.price }}</del> ${{ item.discount_price }}
+											{% else %}
+											${{ item.price }}
+											{% endif %}</li>
+									  {% endfor %}
+									</ul>
+								  </td>
+								  <td>
+									  {% if order.being_delivered %}
+										  Being Delivered
+									  {% elif order.received %}
+										  Received
+									  {% else %}
+										  Processing
+									  {% endif %}
+								  </td>
+								<!-- Add more cells for other fields -->
+							</tr>
+							{% empty %}
+							<tr>
+								<td colspan="4">You have no orders yet.</td>
+							</tr>
+						{% endfor %}
+					</tbody>
+				</table>
 			</div>
 			
 			<div class="row">

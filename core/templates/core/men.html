@@ -31,7 +31,17 @@
 						</a>
 						<div class="desc">
 							<span class="text-dark">{{item.get_category_display}}</span>
-							<h2><a href="{{item.get_absolute_url}}">{{item}}</a><span class="badge badge-pill bg-{{item.get_label_display}} text-light m-1">New</span></h2>
+							<h2><a href="{{item.get_absolute_url}}">{{item}}</a><span class="badge badge-pill bg-{{ item.get_label_display }} text-light m-1">
+								{% if item.label == 'P' %}
+									best-sells
+								{% elif item.label == 'S' %}
+									new
+								{% elif item.label == 'D' %}
+									big-discount
+								{% else %}
+									<!-- Handle other cases if needed -->
+								{% endif %}
+							</span></h2>
 							<span class="price">
 								{% if item.discount_price %}
 								<del>${{item.price}}</del> ${{item.discount_price}}

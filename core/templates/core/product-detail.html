@@ -29,7 +29,17 @@
 			</div>
 			<div class="col-sm-4">
 				<div class="product-desc">
-					<h3>{{item}}</h3>
+					<h3>{{item}}<span class="badge badge-pill bg-{{ item.get_label_display }} text-light m-1">
+						{% if item.label == 'P' %}
+							best-sells
+						{% elif item.label == 'S' %}
+							new
+						{% elif item.label == 'D' %}
+							big-discount
+						{% else %}
+							<!-- Handle other cases if needed -->
+						{% endif %}
+					</span></h3>
 					<p class="price">
 						<span>
 							{% if item.discount_price %}

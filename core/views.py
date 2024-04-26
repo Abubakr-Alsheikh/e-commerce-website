@@ -1,4 +1,3 @@
-from audioop import avg
 import json
 import random
 import string
@@ -16,8 +15,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
-from django.db.models import Q
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Case, When, Q, Value
 from django.core.paginator import Paginator
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -25,8 +23,16 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 class HomeView(ListView):
     model = Item
     template_name = 'core/index.html'
-    paginate_by = 12
+    paginate_by = 8
     context_object_name = 'items'
+
+    def get_queryset(self):
+        return Item.objects.filter(Q(label='P') | Q(label='D')).order_by(
+            Case(
+                When(label='P', then=Value(0)),  # Best sellers first (label 'P')
+                default=Value(1)                 # Then big discount (label 'D')
+            )
+        )
 
 def search_items(request):
     if 'q' in request.GET:
@@ -202,6 +208,14 @@ class CartView(LoginRequiredMixin, View):# view.py
             return redirect("core:index")
 
 
+class OrderListView(ListView):
+    model = Order
+    template_name = 'core/order-list.html' 
+    context_object_name = 'user_orders'  
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by('-ordered_date')
+
 def apply_coupon(self):
     form = self.POST
     coupon_code = form.get('coupon_code')
@@ -265,29 +279,6 @@ def remove_from_cart(request, slug):
         messages.warning(request, "You do not have an active order.")
     return redirect("core:product-detail", slug=slug)
 
-# @login_required
-# def remove_from_cart(request, slug):
-#     item = get_object_or_404(Item, slug=slug)
-#     order_qs = Order.objects.filter(user=request.user, is_ordered=False)
-#     if order_qs.exists():
-#         order = order_qs.first()
-#         order_item_qs = OrderItem.objects.filter(item=item, order=order)
-#         if order_item_qs.exists():
-#             order_item = order_item_qs.first()
-#             if order_item.quantity > 1:
-#                 order_item.quantity -= 1
-#                 order_item.save()
-#                 messages.info(request, "This item quantity was decreased.")
-#             else:
-#                 order_item.delete()
-#                 messages.info(request, "This item was removed from your cart.")
-#         else:
-#             messages.warning(request, "This item was not in your cart.")
-#     else:
-#         messages.warning(request, "You do not have an active order.")
-#     return redirect("core:product-detail", slug=slug)
-
-# adding the Remove complete from cart
 def remove_completely_from_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
     order_qs = Order.objects.filter(user=request.user, is_ordered=False)
@@ -497,17 +488,21 @@ class CheckoutView(LoginRequiredMixin, View):
                 }
             )
             return address
-
+        
 def refund_view(request):
     if request.method == 'POST':
         form = RefundForm(request.POST)
         if form.is_valid():
             refund = form.save(commit=False)
-            order = get_object_or_404(Order, ref_code=refund.ref_code)
-            order.request_refund()
-            refund.save()
-            # Send an email or notify staff here
-            messages.success(request, "Your request has been add it successfully.")
+            try:
+                order = Order.objects.get(ref_code=refund.ref_code)
+                order.request_refund()  # Assuming you have this method defined
+                refund.save()
+                messages.success(request, "Your request has been added successfully.")
+            except ObjectDoesNotExist:
+                messages.warning(request, "Invalid reference code. Please try again.")
+            except Exception as e:
+                messages.warning(request, "An unexpected error occurred. Please try again later.")
             return redirect('core:index')
     else:
         form = RefundForm()
