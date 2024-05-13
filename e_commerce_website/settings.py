@@ -164,6 +164,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Crispy forms
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
+def load_env(env_path=".env"):
+    """Loads environment variables from a .env file."""
+    with open(env_path) as f:
+        for line in f:
+            if line.startswith("#") or not line.strip():  # Skip comments and empty lines
+                continue
+            key, value = line.strip().split("=", 1)
+            os.environ[key] = value
+
+# In your manage.py or wsgi.py (or even settings.py)
+load_env() 
+
+# GENAI API keys
+GENAI_API_KEY = os.environ.get('GENAI_API_KEY')
+
 # Stripe API keys
-STRIPE_PUBLIC_KEY = 'pk_test_TYooMQauvdEDq54NiTphI7jx'
-STRIPE_SECRET_KEY = 'sk_test_4eC39HqLyjWDarjtT1zdp7dc'
+STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+
