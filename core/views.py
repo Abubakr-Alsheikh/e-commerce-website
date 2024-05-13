@@ -17,6 +17,9 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from django.db.models import Avg, Count, Case, When, Q, Value
 from django.core.paginator import Paginator
+# Generative AI
+import google.generativeai as genai
+from django.views.decorators.csrf import csrf_exempt
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -59,7 +62,7 @@ class WomenView(ListView):
 
     def get_queryset(self):
         return Item.objects.filter(category='W', available=True)
-    
+
 class AllProductsView(ListView):
     model = Item
     template_name = 'core/all-products.html'
@@ -71,12 +74,12 @@ class SearchResultsView(ListView):
     template_name = 'core/search-results.html'
     paginate_by = 8
     context_object_name = 'items'
-    
+
     def get_queryset(self):
         query = self.request.GET.get('q', '')
         if query:
             return Item.objects.filter(
-                Q(title__icontains=query) | 
+                Q(title__icontains=query) |
                 Q(description__icontains=query),
                 available=True
             ).distinct()
@@ -91,7 +94,7 @@ class ItemDetailView(DetailView):
     model = Item
     template_name = 'core/product-detail.html'
     context_object_name = 'item'
-    # paginate_by = 3  # Set the number of items per page    
+    # paginate_by = 3  # Set the number of items per page
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -135,7 +138,7 @@ class ItemDetailView(DetailView):
 
         # Add the star counts and percentages to the context
         context.update(star_counts)
-        
+
         # Get all reviews and paginate them
         reviews = self.object.review_set.all()
         paginator = Paginator(reviews, 5)  # Show 5 reviews per page
@@ -178,10 +181,10 @@ class CartView(LoginRequiredMixin, View):# view.py
         try:
             order_items = OrderItem.objects.filter(order__user=self.request.user, order__is_ordered=False)
             order = Order.objects.filter(user=self.request.user, is_ordered=False).first()
-            coupon_code = self.request.GET.get('coupon_code') 
+            coupon_code = self.request.GET.get('coupon_code')
 
-            if order and order.coupon:  
-                coupon_discount_percentage = order.coupon.discount  
+            if order and order.coupon:
+                coupon_discount_percentage = order.coupon.discount
             else:
                 coupon_discount_percentage = 0
 
@@ -210,8 +213,8 @@ class CartView(LoginRequiredMixin, View):# view.py
 
 class OrderListView(ListView):
     model = Order
-    template_name = 'core/order-list.html' 
-    context_object_name = 'user_orders'  
+    template_name = 'core/order-list.html'
+    context_object_name = 'user_orders'
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user).order_by('-ordered_date')
@@ -237,7 +240,7 @@ def apply_coupon(self):
 @require_POST
 def add_to_cart(request, slug):
     item = get_object_or_404(Item, slug=slug)
-   
+
     data = json.loads(request.body)
     quantity = data.get('quantity')
     quantity = int(quantity) if quantity.isdigit() else 1
@@ -313,12 +316,12 @@ class CheckoutView(LoginRequiredMixin, View):
         try:
             order = Order.objects.get(user=self.request.user, is_ordered=False)
             order_items = OrderItem.objects.filter(order__user=self.request.user, order__is_ordered=False)
-            
+
             # Check if there are any items in the order
             if not order_items.exists():
                 messages.warning(self.request, "Your cart is empty. Please add items before proceeding to checkout.")
                 return redirect("core:cart")  # Redirect to cart if no items
-            
+
             default_billing_address = Address.objects.filter(
                 user=self.request.user,
                 address_type='B',
@@ -332,8 +335,8 @@ class CheckoutView(LoginRequiredMixin, View):
             ).first()
 
             # Add the logic for savings and coupon discount
-            if order.coupon:  
-                coupon_discount_percentage = order.coupon.discount  
+            if order.coupon:
+                coupon_discount_percentage = order.coupon.discount
             else:
                 coupon_discount_percentage = 0
 
@@ -345,7 +348,7 @@ class CheckoutView(LoginRequiredMixin, View):
             order_total = subtotal_after_saving - coupon_discount
 
             subtotal = sum([item.get_final_price() for item in order_items])
-            
+
             context = {
                 'form': form,
                 'order_items': order_items,
@@ -431,11 +434,11 @@ class CheckoutView(LoginRequiredMixin, View):
                     #     # Payment was unsuccessful
                     #     messages.warning(self.request, "Your card has been declined.")
                     #     return redirect('core:checkout')
-                    
+
                     order.is_ordered = True
                     order.ref_code = genterate_random_ref_code()
                     order.save()
-                    
+
                     messages.success(self.request, "Your order has been add it successfully.")
                     return redirect('core:order-complete')
                 elif payment_option == 'P':
@@ -449,7 +452,7 @@ class CheckoutView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             messages.warning(self.request, "You do not have an order")
             return redirect("core:cart")
-    
+
     def get_or_create_address(self, use_default, address_type, form):
         if use_default:
             address = Address.objects.filter(
@@ -488,7 +491,7 @@ class CheckoutView(LoginRequiredMixin, View):
                 }
             )
             return address
-        
+
 def refund_view(request):
     if request.method == 'POST':
         form = RefundForm(request.POST)
@@ -559,8 +562,184 @@ class PaymentView(View):
             messages.error(self.request, "A serious error occurred. We have been notified.")
 
         return redirect("/")
-    
+
 def order_complete(request):
     context ={
     }
     return render(request, 'core/order-complete.html',context)
+
+# Generative AI
+@csrf_exempt
+def chatRespone(request):
+
+    print(request)
+    if request.method == 'POST':
+        if not request.body:
+            return JsonResponse({'error': 'Empty request'}, status=400)
+        # Configure the model with your API key
+        genai.configure(api_key="")
+
+        # Set up the model and safety settings
+        generation_config = {
+            "temperature": 0.9,
+            "top_p": 1,
+            "top_k": 0,
+            "max_output_tokens": 2048,
+        }
+
+        safety_settings = [
+            {
+                "category": "HARM_CATEGORY_HARASSMENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_HATE_SPEECH",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+            {
+                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
+            },
+        ]
+
+        model = genai.GenerativeModel(model_name="gemini-1.0-pro",
+                                      generation_config=generation_config,
+                                      safety_settings=safety_settings)
+
+        # Parse the request body
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+
+        user_message = data['message']
+        user_chat = data['userchat']
+
+        chatHistory = [
+          {
+             "role": "user",
+             "parts": [
+              "Hi there! I'm providing you with some information about myself so you can effectively roleplay as me. My name is Abubakr Alsheikh, and I'm a passionate web designer and developer originally from Syria. I started my journey in the tech world with a degree in Software Engineering, and I'm currently expanding my knowledge by pursuing a degree in Information Technology Engineering and also getting a Bachelor's degree in Software Enginnering. I love creating websites that are not only visually appealing but also highly functional and user-friendly.  My ultimate goal is to use my skills to make a positive impact on the world through meaningful projects. I believe technology has the power to change the world, and I'm excited to be a part of that change."
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "It's a pleasure to meet you, Abubakr! I'm ready to step into your shoes and engage in conversations as a web developer and designer with your unique background and aspirations."
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "About me: About me:I am Abubakr Alsheikh, a web designer and developer from Syria. I have a degree in Software Engineering and I am studying Information Technology Engineering. I have also taken many online courses on Coursera to learn web design and development skills.I love creating websites that are beautiful, fast, and easy to use. I use various tools and languages to build websites, such as HTML, CSS, JavaScript, PHP, Django, and ASP.NET. I also use databases like MySQL, SQL Server, and SQLite to store and manage data.I am always curious and eager to learn new things and work on new projects. I enjoy solving problems and challenges with design thinking and coding. I also like to work with others and share ideas and knowledge.My dream is to use my skills to make a positive impact on the world. I want to work on projects that are not only professionally rewarding, but also socially meaningful. I believe that technology can change the world, and I want to be part of that change.Thank you for taking the time to learn more about me. I look forward to creating amazing websites with you.Contact me:You can contact me by email at AbubakrAlsheikh@outlook.com or by phone at +963980235562. You can also send me a message on my website at https://abubakr-alsheikh.github.io/my-portfolio/. There is a contact section on the website where you can fill out a form and I will reply to you as soon as possible.Education:- Syrian Virtual University: Bachelor's degree in Information Technology Engineering (Oct 2021 – 2026)- Aleppo University: Technical diploma in Software Engineering (Sep 2021 – Jun 2023), 1st graduate, Grade: 90.63%Licenses and certifications:- Top licenses and certifications:    - Web Design for Everyone: the basis of web development and coding (University of Michigan | Coursera)    - Web Applications for Everybody (University of Michigan | Coursera)    - Python for Everybody (University of Michigan | Coursera)    - Django for Everybody Specialization (University of Michigan | Coursera)    - Meta Front-End Developer Professional Certificate (Meta | Coursera)- Other licenses and certifications:    - Introduction to HTML5 (University of Michigan | Coursera)    - Introduction to CSS3 (University of Michigan | Coursera)    - Introduction to Structured Query Language (SQL) (University of Michigan | Coursera)    - Building Web Applications in PHP (University of Michigan | Coursera)    - Advanced Styling with Responsive Design (University of Michigan | Coursera)    - Interactivity with JavaScript (University of Michigan | Coursera)    - JavaScript, jQuery, and JSON (University of Michigan | Coursera)    - Web Design for Everybody Capstone (University of Michigan | Coursera)    - Building Database Applications in PHP (University of Michigan | Coursera)    - Programming for Everybody (Getting Started with Python) (University of Michigan | Coursera)    - Python Data Structures (University of Michigan | Coursera)    - Django Features and Libraries (University of Michigan | Coursera)    - Using JavaScript and JSON in Django (University of Michigan | Coursera)    - Using Databases with Python (University of Michigan | Coursera)    - Building Web Applications in Django (University of Michigan | Coursera)    - Web Application Technologies and Django (University of Michigan | Coursera)    - Introduction to Front-End Development (Meta)To see any new ones, you can check the latest certificates section on my website.Skills:- Front End: HTML, CSS, JavaScript, Bootstrap, React, Vue- Back End: PHP, Django, Asp.net, Node.js- Data Bases: MySQL, SQL Server, SQLite- Design tools: Figma, Photoshop- Programming languages: C#, Python- Other: AI Tools, Microsoft Office, UnityTop Projects:- Dynamic Website and Control Panel Development for Sama Media (Graduation Project):    - Associated with Aleppo University    - I designed and developed a dynamic website and a control panel for Sama Media, a graphic design and advertising company.    - The website showcases the company’s portfolio, clients, and team, and has a contact form for visitors. The website is responsive, social media integrated, and built with HTML, CSS, JavaScript, and PHP.    - The control panel is a content management system that allows the company to add, modify, or remove content related to projects, clients, team, and messages. The control panel uses a MySQL database for data storage and retrieval.- Online Book Inventory System:    - Associated with Syrian Virtual University    - I developed an online book inventory system as part of my university assignment. It is built with ASP.NET and demonstrates various web development skills and features.    - The project allows users to browse, search, and manage books online. Users can view detailed information about each book, and create their own reading list by adding or removing books. The project supports user authentication and authorization, and has an admin page for CRUD operations on the books database.    - The project is responsive, user-friendly, and uses a search bar to find books by title. The project uses HTML, CSS, JavaScript, and ASP.NET for the front end, and SQL Server for the back end."
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Thanks for sharing, Abubakr! It's impressive to see your dedication and passion for web development. I'm excited to learn more about your work and answer any questions people might have about your expertise."
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "Let's keep our conversation flowing like a typical chat. Short and sweet answers will do the trick!"
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Got it! Short and to the point – I can handle that."
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "Let's keep the conversation casual and natural, just like a regular chat between two people.  No need to be overly formal."
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Sounds good! I'll do my best to chat like a real person and avoid sounding too robotic.  Of course, if I encounter something beyond my knowledge, I might need to admit my limitations."
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "If someone messages in a language other than English, politely let them know it would be easier to communicate in English.  However, still try your best to understand their questions and respond in their language using the information I provided about myself."
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Understood. I'll politely suggest using English for ease of communication, but I'll do my best to understand and respond in their language based on the information you've shared about yourself and your expertise."
+             ]
+            },
+            {
+              "role":"user",
+              "parts":["if the user said greeting or any way of greeting tell them \"Hi, my name is Abubakr, I am web developer and designer. What do you want to ask me\" or similar to it not exactly like it"],
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Hey there! Abubakr here, web developer and designer. What brings you here today?",
+              "Hi! I'm Abubakr, a web developer with a passion for design. How can I help you?",
+              "Greetings! I'm Abubakr, and I build beautiful and functional websites. What would you like to know?",
+              "Hello! My name is Abubakr. I'm a web developer and designer always happy to chat. What's on your mind?"
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "Are you currently involved in any exciting projects or job searches?"
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "I'm actively seeking new projects and opportunities where I can utilize my web development skills and contribute to something impactful. I'm open to freelance work, collaborations, and full-time positions that align with my passion for creating beautiful and functional websites."
+             ]
+            },
+            {
+             "role": "user",
+             "parts": [
+              "What kind of projects are you currently involved in?"
+             ]
+            },
+            {
+             "role": "model",
+             "parts": [
+              "Currently, I'm between projects, but I'm always on the lookout for exciting opportunities where I can apply my web development skills and contribute to something meaningful."
+             ]
+            },
+
+        ];
+
+        combined_history = chatHistory + user_chat
+
+        # Start the conversation and send the user message
+        convo = model.start_chat(history=combined_history)
+        convo.send_message(user_message)
+
+        # Get the model response
+        response = convo.last.text
+
+        # Create the JsonResponse object
+        response_data = JsonResponse({'response': response})
+
+        # Add CORS headers to the response
+        response_data["Access-Control-Allow-Origin"] = "*"
+        response_data["Access-Control-Allow-Methods"] = "POST"
+        # response_data["Access-Control-Allow-Methods"] = "POST, GET, OPTIONS"
+        # response_data["Access-Control-Max-Age"] = "3600"
+        response_data["Access-Control-Allow-Headers"] = "Content-Type, X-CSRFToken"
+
+        return response_data
+    else:
+        return JsonResponse({'error': 'You are not using post request'}, status=400)

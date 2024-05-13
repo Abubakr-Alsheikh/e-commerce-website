@@ -2,16 +2,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path
 from .views import (
-    HomeView, 
+    HomeView,
     MenView,
     WomenView,
-    AllProductsView, 
-    CartView, 
+    AllProductsView,
+    CartView,
     OrderListView,
-    ItemDetailView, 
+    ItemDetailView,
     CheckoutView,
     PaymentView,
-    order_complete, 
+    order_complete,
     add_to_cart,
     remove_from_cart,
     update_order_item_quantity,
@@ -19,7 +19,8 @@ from .views import (
     apply_coupon,
     refund_view,
     search_items,
-    SearchResultsView
+    SearchResultsView,
+    chatRespone
 )
 
 app_name = 'core'
@@ -40,7 +41,8 @@ urlpatterns = [
     path('remove-from-cart/<slug:slug>', remove_from_cart, name='remove-from-cart'),
     path('remove-completely-from-cart/<slug:slug>', remove_completely_from_cart, name='remove-completely-from-cart'),
     path('checkout/', CheckoutView.as_view(), name='checkout'),
-    path('request-refund/', refund_view, name='request-refund'),    
+    path('request-refund/', refund_view, name='request-refund'),
     path('payment/<payment_option>', PaymentView.as_view(), name='payment'),
     path('order-complete/', order_complete, name='order-complete'),
+    path('chat-response/', chatRespone),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

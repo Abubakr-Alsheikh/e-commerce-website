@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-q53l#&(#a25nqx#km&sj8uioln38jp)z9jt9xqu#tt%s2b2ct!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'crispy_bootstrap4',
     'django_countries',
 
+    'corsheaders',
+
     # Custome apps
     'core',
 ]
@@ -59,7 +61,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "allauth.account.middleware.AccountMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
 ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'e_commerce_website.urls'
 
