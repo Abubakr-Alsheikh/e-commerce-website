@@ -76,14 +76,15 @@ def analyze_video(request):
 
             chat_session = model.start_chat(history=[])
 
-            # Send the transcript as user input
-            response = chat_session.send_message(f"""Based on the following transcript from a video, write a concise summary:
+            prompt = f"""Based on the following transcript from a video, write a concise summary:
 
             {transcription}
 
             Summary:
-            """)
-            generated_summary = response.result
+            """
+            # Send the transcript as user input
+            response = chat_session.send_message(prompt)
+            generated_summary = response.text
 
             # Create Video and VideoSession
             video = Video.objects.create(
@@ -91,6 +92,20 @@ def analyze_video(request):
                 youtube_title=video_file.name,  # Use the original filename
             )
             session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
+            
+            # Update the chat history in the session
+            session.chat_history.append({
+                "role": "user",
+                "parts": [
+                    prompt
+                ],
+            })
+            session.chat_history.append({
+                "role": "model",
+                "parts": [
+                    generated_summary
+                ],
+            })
             session.save()
 
             return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id})
@@ -152,14 +167,14 @@ def ask_question(request):
         chat_session = model.start_chat(history=chat_history)
 
         # Ask the question and get the answer
-        response = chat_session.send_message(f"""Based on the following transcript from a YouTube video, answer the provided question.
+        response = chat_session.send_message(f"""Based on the following transcript from a video, answer the provided question.
 
         Question: 
         {question}
 
         Answer:
         """)
-        generated_answer = response.result
+        generated_answer = response.text
 
         # Update the chat history in the session
         session.chat_history.append({

@@ -5,7 +5,6 @@ import uuid
 class Video(models.Model):
     user_id = models.UUIDField(primary_key=True)
     youtube_title = models.CharField(max_length=300)
-    youtube_link = models.URLField(unique=True)  
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
