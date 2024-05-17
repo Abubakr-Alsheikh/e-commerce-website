@@ -8,7 +8,7 @@ from pytube import YouTube
 import os
 import assemblyai as aai
 import google.generativeai as genai
-from .models import Video, VideoSession
+from .models import Video, VideoSession, UserCustom
 
 def index(request):
     return render(request, 'ask_yourtube/index.html')
@@ -24,6 +24,8 @@ def analyze_video(request):
             if not user_id or not video_file:
                 return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
 
+            user, created = UserCustom.objects.get_or_create(user_id=user_id)
+            
             # Save the video file temporarily
             temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
             with open(temp_video_path, 'wb+') as destination:
@@ -88,8 +90,8 @@ def analyze_video(request):
 
             # Create Video and VideoSession
             video = Video.objects.create(
-                user_id=user_id,
-                youtube_title=video_file.name,  # Use the original filename
+                user_id=user, 
+                video_title=video_file.name,
             )
             session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
             
