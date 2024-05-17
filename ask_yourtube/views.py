@@ -18,34 +18,37 @@ def index(request):
 def analyze_video(request):
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
-            yt_link = data['link']
-            user_id = data.get('user_id')
+            user_id = request.POST.get('user_id')
+            video_file = request.FILES.get('video')
 
-            if not user_id:  
-                user_id = uuid.uuid4()
-        except (KeyError, json.JSONDecodeError):
-            return JsonResponse({'error': 'Invalid data sent'}, status=400)
+            if not user_id or not video_file:
+                return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
 
-        # Configure Google Generative AI
-        genai.configure(api_key=settings.GENAI_API_KEY)
+            # Save the video file temporarily
+            temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
+            with open(temp_video_path, 'wb+') as destination:
+                for chunk in video_file.chunks():
+                    destination.write(chunk)
 
-        # get yt title
-        title = yt_title(yt_link)
+            # Configure Google Generative AI
+            genai.configure(api_key=settings.GENAI_API_KEY)
 
-        # get transcript
-        transcription = get_transcription(yt_link)
-        if not transcription:
-            return JsonResponse({'error': "Failed to get transcript"}, status=500)
-        
-        generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 256,
-        }
+            # get transcript
+            transcription = get_transcription(temp_video_path)
+            if not transcription:
+                return JsonResponse({'error': "Failed to get transcript"}, status=500)
 
-        safety_settings = [
+            # Delete the temporary video file 
+            os.remove(temp_video_path)
+
+            generation_config = {
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "top_k": 40,
+                "max_output_tokens": 256,
+            }
+
+            safety_settings = [
             {
                 "category": "HARM_CATEGORY_HARASSMENT",
                 "threshold": "BLOCK_MEDIUM_AND_ABOVE"
@@ -64,36 +67,35 @@ def analyze_video(request):
             },
         ]
         
-        try:
-            model = genai.GenerativeModel(model_name="gemini-1.0-pro",
-                                        generation_config=generation_config,
-                                        safety_settings=safety_settings)
-        except:
-            return JsonResponse({'error': "Failed to generate summary"}, status=500)
-        
-        chat_session = model.start_chat(history=[])
+            try:
+                model = genai.GenerativeModel(model_name="gemini-1.0-pro",
+                                            generation_config=generation_config,
+                                            safety_settings=safety_settings)
+            except:
+                return JsonResponse({'error': "Failed to generate summary"}, status=500)
 
-        #  Send the transcript as user input
-        response = chat_session.send_message(f"""Based on the following transcript from a YouTube video, write a concise summary. Write it based on the transcript, but don't make it look like a YouTube video, and After you generate the summary, I will ask you questions about the video based on the transcript. Please answer my questions accurately and concisely.:
+            chat_session = model.start_chat(history=[])
 
-        {transcription}
+            # Send the transcript as user input
+            response = chat_session.send_message(f"""Based on the following transcript from a video, write a concise summary:
 
-        Summary:
-        """)
-        generated_summary = response.result
+            {transcription}
 
-        # Create Video and VideoSession
-        video, created = Video.objects.get_or_create(
-            user_id=user_id, 
-            youtube_link=yt_link,
-            defaults={'youtube_title': title}
-        )
-        session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
-        session.save()
+            Summary:
+            """)
+            generated_summary = response.result
 
-        return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id})
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=405)
+            # Create Video and VideoSession
+            video = Video.objects.create(
+                user_id=user_id,
+                youtube_title=video_file.name,  # Use the original filename
+            )
+            session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
+            session.save()
+
+            return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def ask_question(request):
@@ -184,22 +186,10 @@ def yt_title(link):
     title = yt.title
     return title
 
-def download_audio(link):
-    yt = YouTube(link)
-    video = yt.streams.filter(only_audio=True).first()
-    out_file = video.download(output_path=settings.MEDIA_ROOT)
-    base, ext = os.path.splitext(out_file)
-    new_file = base + '.mp3'
-    os.rename(out_file, new_file)
-    return new_file
-
-def get_transcription(link):
-    audio_file = download_audio(link)
+def get_transcription(audio_file):
     aai.settings.api_key = settings.ASSEMBLYAI_API_KEY
-
     transcriber = aai.Transcriber()
     transcript = transcriber.transcribe(audio_file)
-
     return transcript.text
 
 def video_list(request):
