@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load allauth account %}
+{% load crispy_forms_tags %}
+{% block head_title %}
+    {% trans "Login" %}
+{% endblock head_title %}
+{% block content %}
+    <main>
+        <div class="container">
+            {% element h1 %}
+                {% trans "Log in" %}
+            {% endelement %}
+            <p>
+                {% blocktrans %}If you have not created an account yet, then please
+                <a href="{{ signup_url }}" style="text-decoration: underline; color: blue;" >sign up</a> first.{% endblocktrans %}
+            </p>
+            {% url 'account_login' as login_url %}
+            {% element form form=form method="post" action=login_url tags="entrance,login" %}
+                {% slot body %}
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    {% if redirect_field_value %}
+                        <input type="hidden"
+                            name="{{ redirect_field_name }}"
+                            value="{{ redirect_field_value }}" />
+                    {% endif %}
+                {% endslot %}
+                {% slot actions %}
+                    <input type="submit" value="{% trans 'Log in' %}" class="btn btn-primary btn-inline" />
+                {% endslot %}
+            {% endelement %}
+            {% if SOCIALACCOUNT_ENABLED %}
+                {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
+            {% endif %}
+        </div>
+    </main>
+{% endblock content %}

@@ -1,15 +1,22 @@
 from django.db import models
-from django.contrib.auth.models import User
 import uuid 
     
-class Video(models.Model):
+    
+class UserCustom(models.Model):
     user_id = models.UUIDField(primary_key=True)
-    youtube_title = models.CharField(max_length=300)
-    youtube_link = models.URLField(unique=True)  
+    # Add other user-related fields here
+    # ...
+
+    def __str__(self):
+        return str(self.user_id)  # Or any other representation you prefer
+    
+class Video(models.Model):
+    user_id =  models.ForeignKey(UserCustom, on_delete=models.CASCADE, null=True, blank=True)  # Foreign key to User
+    video_title = models.CharField(max_length=300)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.youtube_title
+        return self.video_title
 
 class VideoSession(models.Model):
     session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -20,4 +27,4 @@ class VideoSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Session ID: {self.session_id} for Video: {self.video.youtube_title}"
+        return f"Session ID: {self.session_id} for Video: {self.video.video_title}"

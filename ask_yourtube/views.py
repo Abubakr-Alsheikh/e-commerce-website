@@ -8,7 +8,7 @@ from pytube import YouTube
 import os
 import assemblyai as aai
 import google.generativeai as genai
-from .models import Video, VideoSession
+from .models import Video, VideoSession, UserCustom
 
 def index(request):
     return render(request, 'ask_yourtube/index.html')
@@ -24,6 +24,8 @@ def analyze_video(request):
             if not user_id or not video_file:
                 return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
 
+            user, created = UserCustom.objects.get_or_create(user_id=user_id)
+            
             # Save the video file temporarily
             temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
             with open(temp_video_path, 'wb+') as destination:
@@ -76,21 +78,36 @@ def analyze_video(request):
 
             chat_session = model.start_chat(history=[])
 
-            # Send the transcript as user input
-            response = chat_session.send_message(f"""Based on the following transcript from a video, write a concise summary:
+            prompt = f"""Based on the following transcript from a video, write a concise summary:
 
             {transcription}
 
             Summary:
-            """)
-            generated_summary = response.result
+            """
+            # Send the transcript as user input
+            response = chat_session.send_message(prompt)
+            generated_summary = response.text
 
             # Create Video and VideoSession
             video = Video.objects.create(
-                user_id=user_id,
-                youtube_title=video_file.name,  # Use the original filename
+                user_id=user, 
+                video_title=video_file.name,
             )
             session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
+            
+            # Update the chat history in the session
+            session.chat_history.append({
+                "role": "user",
+                "parts": [
+                    prompt
+                ],
+            })
+            session.chat_history.append({
+                "role": "model",
+                "parts": [
+                    generated_summary
+                ],
+            })
             session.save()
 
             return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id})
@@ -152,14 +169,14 @@ def ask_question(request):
         chat_session = model.start_chat(history=chat_history)
 
         # Ask the question and get the answer
-        response = chat_session.send_message(f"""Based on the following transcript from a YouTube video, answer the provided question.
+        response = chat_session.send_message(f"""Based on the following transcript from a video, answer the provided question.
 
         Question: 
         {question}
 
         Answer:
         """)
-        generated_answer = response.result
+        generated_answer = response.text
 
         # Update the chat history in the session
         session.chat_history.append({

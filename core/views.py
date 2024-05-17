@@ -736,6 +736,7 @@ def chatRespone(request):
 
         # Start the conversation and send the user message
         convo = model.start_chat(history=combined_history)
+        print(user_message)
         convo.send_message(user_message)
 
         # Get the model response
