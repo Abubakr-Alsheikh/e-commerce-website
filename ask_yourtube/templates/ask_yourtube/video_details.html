@@ -1,0 +1,21 @@
+{% extends 'ask_yourtube/base.html' %}
+{% block title %}Video Details{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title">Video Details</h2>
+                    <div class="border p-4 rounded-lg">
+                        <h3>{{ video.youtube_title }}</h3>
+                        <h4>Youtube Link</h4>
+                        <a href="{{ video.youtube_link }}" class="text-primary">{{ video.youtube_link }}</a>
+                        <!-- You can add more details or a button to resume the chat here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

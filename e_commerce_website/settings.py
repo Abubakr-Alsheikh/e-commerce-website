@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 
     # Custome apps
     'core',
+    'ask_yourtube',
 ]
 
 MIDDLEWARE = [
@@ -178,6 +179,9 @@ load_env()
 
 # GENAI API keys
 GENAI_API_KEY = os.environ.get('GENAI_API_KEY')
+
+# AssemblyAI API keys
+ASSEMBLYAI_API_KEY = os.environ.get('ASSEMBLYAI_API_KEY')
 
 # Stripe API keys
 STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY')
