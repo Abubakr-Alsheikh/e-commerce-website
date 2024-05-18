@@ -224,11 +224,15 @@ def video_details(request, video_id):
             video = get_object_or_404(Video, id=video_id, user_id=user_id)
             # Get the associated VideoSession 
             video_session = VideoSession.objects.get(video=video) 
+            
+            # Exclude the first message from chat_history
+            chat_history = video_session.chat_history[1:]
 
             context = {
                 'video': video,
                 'user_id': user_id,
                 'video_session': video_session,
+                'chat_history': chat_history  # Pass the modified chat history
             }
             return render(request, 'ask_yourtube/video_details.html', context)
 
