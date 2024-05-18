@@ -23,7 +23,7 @@
                   <div class="card-body">
                     <div id="chatContainer">
                       <div id="chatMessages">
-                        {% for message in video_session.chat_history %} 
+                        {% for message in chat_history %} 
                           {% if message.role == 'user' %}
                             <p class="text-light bg-secondary p-2 rounded mb-1"><strong>You:</strong> {{ message.parts.0 }}</p>
                           {% elif message.role == 'model' %}
