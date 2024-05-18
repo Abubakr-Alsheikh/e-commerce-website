@@ -71,11 +71,17 @@
             });
         }
 
-        const savedVideosLink = document.getElementById('savedVideosLink');
-        const userID = getUserID(); // Function you provided to get userID from localStorage
+        // Execute the code after the page loads
+        window.addEventListener('load', (event) => {
+            const savedVideosLink = document.getElementById('savedVideosLink');
+            const userID = getUserID(); 
 
-        savedVideosLink.href = `{% url 'ask-yourtube:video-list' %}?user_id=${userID}`; 
-
+            // Check if the savedVideosLink element exists
+            if (savedVideosLink) {
+                savedVideosLink.href = `{% url 'ask-yourtube:video-list' %}?user_id=${userID}`; 
+            } 
+        });
+        
         document.getElementById('uploadVideoButton').addEventListener('click', async () => {
             const videoFile = document.getElementById('videoFile').files[0];
             const videoSummary = document.getElementById('videoSummary');
