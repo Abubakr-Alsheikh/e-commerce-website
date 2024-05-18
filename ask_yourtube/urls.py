@@ -9,5 +9,5 @@ urlpatterns = [
     path('analyze-video/', analyze_video, name='analyze-video'),
     path('ask-question/', ask_question, name='ask-question'),
     path('video-list/', video_list, name='video-list'),  
-    path('video-details/<uuid:video_id>/', video_details, name='video-details'), 
+    path('video-details/<int:video_id>/', video_details, name='video-details'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

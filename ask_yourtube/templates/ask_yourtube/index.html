@@ -71,6 +71,11 @@
             });
         }
 
+        const savedVideosLink = document.getElementById('savedVideosLink');
+        const userID = getUserID(); // Function you provided to get userID from localStorage
+
+        savedVideosLink.href = `{% url 'ask-yourtube:video-list' %}?user_id=${userID}`; 
+
         document.getElementById('uploadVideoButton').addEventListener('click', async () => {
             const videoFile = document.getElementById('videoFile').files[0];
             const videoSummary = document.getElementById('videoSummary');

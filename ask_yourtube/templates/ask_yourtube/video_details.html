@@ -4,18 +4,100 @@
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-sm">
+            <div class="card shadow-sm bg-secondary text-light"> 
                 <div class="card-body">
                     <h2 class="card-title">Video Details</h2>
-                    <div class="border p-4 rounded-lg">
-                        <h3>{{ video.youtube_title }}</h3>
-                        <h4>Youtube Link</h4>
-                        <a href="{{ video.youtube_link }}" class="text-primary">{{ video.youtube_link }}</a>
-                        <!-- You can add more details or a button to resume the chat here -->
+                    
+                    <div class="border p-4 rounded-lg bg-light text-dark mb-4">
+                        <h3>{{ video.video_title }}</h3> 
+                        
+                        <div id="videoSummary" class="mt-4 text-muted">
+                            <h3 class="mb-3">Video Summary</h3>
+                            <p id="summaryContent">{{ video.videosession.summary }}</p> 
+                        </div>
                     </div>
+
+                    <div id="chatForm" class="mt-4">
+                        <h3 class="mb-3">Conversation History</h3>
+                        <div class="card shadow-sm bg-light text-dark">
+                            <div class="card-body">
+                                <div id="chatContainer">
+                                    <div id="chatMessages">
+                                        {% for message in video.videosession.chat_history %}
+                                            {% if message.role == 'user' %}
+                                                <p class="text-light bg-secondary p-2 rounded mb-1"><strong>You:</strong> {{ message.parts.0 }}</p>
+                                            {% elif message.role == 'model' %}
+                                                <p class="text-dark bg-light p-2 rounded mb-1"><strong>AskVid:</strong> {{ message.parts.0 }}</p>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div class="input-group mt-2">
+                                        <input id="questionInput" type="text" class="form-control" placeholder="Type your question..." aria-label="Your Question" aria-describedby="question-label">
+                                        <button id="askQuestionButton" class="btn btn-primary">Send</button>
+                                    </div>
+                                    <div id="questionProcessingMessage" style="display: none; margin-top: 10px;">Processing, please wait...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="session-id" value="{{ video.videosession.session_id }}">
+
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('askQuestionButton').addEventListener('click', async () => {
+        const questionInput = document.getElementById('questionInput');
+        const question = questionInput.value;
+        const sessionIdInput = document.getElementById('session-id');
+        const sessionId = sessionIdInput.value;
+        const chatMessages = document.getElementById('chatMessages');
+        const askQuestionButton = document.getElementById('askQuestionButton');
+        const questionProcessingMessage = document.getElementById('questionProcessingMessage');
+
+        if (question) {
+            // Disable the button and show processing message
+            askQuestionButton.disabled = true;
+            questionProcessingMessage.style.display = 'block';
+
+            try {
+                // Fetch answer from the backend
+                const endpointUrl = "{% url 'ask-yourtube:ask-question' %}"; 
+                const response = await fetch(endpointUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ question: question, session_id: sessionId })
+                });
+                const data = await response.json();
+
+                // Display the answer
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.innerHTML = `
+                    <p class="text-light bg-secondary p-2 rounded mb-1"><strong>You:</strong> ${question}</p>
+                    <p class="text-dark bg-light p-2 rounded mb-1"><strong>AskVid:</strong> ${data.answer}</p>
+                `;
+                chatMessages.appendChild(messageDiv);
+                
+            } catch (error) {
+                console.error("Error occurred:", error);
+                alert("Something went wrong. Please try again later.");
+            } finally {
+                // Re-enable the button, clear input, and hide processing message
+                askQuestionButton.disabled = false;
+                questionInput.value = '';
+                questionProcessingMessage.style.display = 'none'; 
+            }
+        } else {
+            alert("Please enter a question.");
+        }
+    });
+</script>
+
 {% endblock %}
