@@ -4,210 +4,157 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
 import json
-from pytube import YouTube
 import os
 import assemblyai as aai
 import google.generativeai as genai
 from .models import Video, VideoSession, UserCustom
+import mimetypes
+# import moviepy.editor as mp
 
 def index(request):
     return render(request, 'ask_yourtube/index.html')
 
+def _get_genai_model():
+    
+    # Configure Google Generative AI
+    genai.configure(api_key=settings.GENAI_API_KEY)
+
+    # Generation and Safety configurations
+    GENERATION_CONFIG = {
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "top_k": 40,
+        "max_output_tokens": 1024, # Adjusted for longer potential responses in ask_question
+    }
+    SAFETY_SETTINGS = [
+        {"category": f"HARM_CATEGORY_{cat}", "threshold": "BLOCK_MEDIUM_AND_ABOVE"} 
+        for cat in ["HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"]
+    ]
+
+    return genai.GenerativeModel(model_name="gemini-1.0-pro", 
+                                   generation_config=GENERATION_CONFIG,
+                                   safety_settings=SAFETY_SETTINGS)
 
 @csrf_exempt
 def analyze_video(request):
-    if request.method == 'POST':
-        try:
-            user_id = request.POST.get('user_id')
-            video_file = request.FILES.get('video')
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+    user_id = request.POST.get('user_id')
+    video_file = request.FILES.get('video')
+    if not user_id or not video_file:
+        return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
 
-            if not user_id or not video_file:
-                return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
+    # Validate file type
+    file_type = mimetypes.guess_type(video_file.name)[0]
+    if not file_type.startswith("video/") and not file_type.startswith("audio/"):
+        return JsonResponse({'error': 'Invalid file type. Please select a video or audio file.'}, status=400)
 
-            user, created = UserCustom.objects.get_or_create(user_id=user_id)
+    # Validate file size
+    MAX_FILE_SIZE_MB = 50  # Replace with your value
+    if video_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+        return JsonResponse({'error': f'File size too large. The maximum allowed size is {MAX_FILE_SIZE_MB}MB.'}, status=400)
 
-            # Save the video file temporarily
-            temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
-            with open(temp_video_path, 'wb+') as destination:
-                for chunk in video_file.chunks():
-                    destination.write(chunk)
+    # Validate video duration
+    # MAX_DURATION_MINUTES = 60  # Replace with your value
+    # clip = mp.VideoFileClip(video_file.temporary_file_path())
+    # if clip.duration > MAX_DURATION_MINUTES * 60:
+    #     return JsonResponse({'error': f'Video duration too long. The maximum allowed duration is {MAX_DURATION_MINUTES} minutes.'}, status=400)
 
-            # Configure Google Generative AI
-            genai.configure(api_key=settings.GENAI_API_KEY)
+    user, _ = UserCustom.objects.get_or_create(user_id=user_id)
+    temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
+    
+    with open(temp_video_path, 'wb+') as destination:
+        for chunk in video_file.chunks():
+            destination.write(chunk)
+    
+    transcription = get_transcription(temp_video_path)
+    os.remove(temp_video_path)
+    if not transcription:
+        return JsonResponse({'error': "Failed to get transcript"}, status=500)
 
-            # get transcript
-            transcription = get_transcription(temp_video_path)
-            if not transcription:
-                return JsonResponse({'error': "Failed to get transcript"}, status=500)
+    try:
+        model = _get_genai_model()
+        chat_session = model.start_chat(history=[])
+        prompt = f"""You will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
+        response = chat_session.send_message(prompt)
+        generated_summary = response.text  
+        # generated_summary = "This is a dummy summary. "  # Replace this with your dummy data
 
-            # Delete the temporary video file
-            os.remove(temp_video_path)
+        video = Video.objects.create(user_id=user, video_title=video_file.name)
+        session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
+        session.chat_history.extend([
+            {"role": "user", "parts": [prompt]},
+            {"role": "model", "parts": [generated_summary]},
+        ])
+        session.save()
 
-            generation_config = {
-                "temperature": 0.7,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": 256,
-            }
+        return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id, 'transcript': session.transcript})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
-            safety_settings = [
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-        ]
-
-            try:
-                model = genai.GenerativeModel(model_name="gemini-1.0-pro",
-                                            generation_config=generation_config,
-                                            safety_settings=safety_settings)
-            except:
-                return JsonResponse({'error': "Failed to generate summary"}, status=500)
-
-            chat_session = model.start_chat(history=[])
-
-            prompt = f"""Based on the following transcript from a video, write a concise summary:
-
-            {transcription}
-
-            Summary:
-            """
-            # Send the transcript as user input
-            response = chat_session.send_message(prompt)
-            generated_summary = response.text
-
-            # Create Video and VideoSession
-            video = Video.objects.create(
-                user_id=user,
-                video_title=video_file.name,
-            )
-            session = VideoSession.objects.create(video=video, transcript=transcription, summary=generated_summary)
-
-            # Update the chat history in the session
-            session.chat_history.append({
-                "role": "user",
-                "parts": [
-                    prompt
-                ],
-            })
-            session.chat_history.append({
-                "role": "model",
-                "parts": [
-                    generated_summary
-                ],
-            })
-            session.save()
-
-            return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def ask_question(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            question = data['question']
-            session_id = data['session_id']
-        except (KeyError, json.JSONDecodeError):
-            return JsonResponse({'error': 'Invalid data sent'}, status=400)
-
-        genai.configure(api_key=settings.GENAI_API_KEY)
-
-        generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 512,
-        }
-
-        safety_settings = [
-            {
-                "category": "HARM_CATEGORY_HARASSMENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_HATE_SPEECH",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                "threshold": "BLOCK_MEDIUM_AND_ABOVE"
-            },
-        ]
-
-        try:
-            model = genai.GenerativeModel(model_name="gemini-1.0-pro",
-                                        generation_config=generation_config,
-                                        safety_settings=safety_settings)
-        except:
-            return JsonResponse({'error': "Failed to get answer"}, status=500)
-
-        # Get the session from the database
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        question = data['question']
+        session_id = data['session_id']
+    except (KeyError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid data sent'}, status=400)
+    
+    try:
+        model = _get_genai_model()
         session = VideoSession.objects.get(session_id=session_id)
-
-        # Construct the chat history based on previous messages
-        chat_history = session.chat_history
-
-        # Create a new chat session with the history
-        chat_session = model.start_chat(history=chat_history)
-
-        # Ask the question and get the answer
-        response = chat_session.send_message(f"""Based on the following transcript from a video, answer the provided question.
-
-        Question:
-        {question}
-
-        Answer:
-        """)
+        chat_session = model.start_chat(history=session.chat_history)
+        response = chat_session.send_message(question) 
         generated_answer = response.text
+        # generated_answer = "This is a dummy answer."  # Replace this with your dummy data
 
-        # Update the chat history in the session
-        session.chat_history.append({
-            "role": "user",
-            "parts": [
-                question
-            ],
-        })
-        session.chat_history.append({
-            "role": "model",
-            "parts": [
-                generated_answer
-            ],
-        })
+        session.chat_history.extend([
+            {"role": "user", "parts": [question]},
+            {"role": "model", "parts": [generated_answer]},
+        ])
         session.save()
 
-        # return answer as a response
         return JsonResponse({'answer': generated_answer})
-    else:
-        return JsonResponse({'error': 'Invalid request method'}, status=405)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+def detect_language(audio_url):
+    config = aai.TranscriptionConfig(
+        audio_end_at=60000,  # first 60 seconds (in milliseconds)
+        language_detection=True,
+        speech_model=aai.SpeechModel.nano,
+    )
+    transcriber = aai.Transcriber()
+    transcript = transcriber.transcribe(audio_url, config=config)
+    return transcript.json_response["language_code"]
 
-def yt_title(link):
-    yt = YouTube(link)
-    title = yt.title
-    return title
+def transcribe_file(audio_url, language_code):
+    supported_languages_for_best = {'en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'nl-NL', 'pt-BR', 'tr-TR', 'ru-RU', 'hi-IN', 'ta-IN', 'mr-IN'}
+
+    config = aai.TranscriptionConfig(
+        language_code=language_code,
+        speech_model=(
+            aai.SpeechModel.best if language_code in supported_languages_for_best
+            else aai.SpeechModel.nano
+        ),
+    )
+    transcriber = aai.Transcriber()
+    transcript = transcriber.transcribe(audio_url, config=config)
+    return transcript
 
 def get_transcription(audio_file):
     aai.settings.api_key = settings.ASSEMBLYAI_API_KEY
-    transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(audio_file)
+    language_code = detect_language(audio_file)
+    transcript = transcribe_file(audio_file, language_code)
     return transcript.text
+    # return "This is a dummy transcription. "  # Replace this with your dummy data
+
 
 def video_list(request):
     user_id = request.GET.get('user_id')
@@ -222,24 +169,20 @@ def video_details(request, video_id):
     if user_id:
         try:
             video = get_object_or_404(Video, id=video_id, user_id=user_id)
-            # Get the associated VideoSession 
             video_session = VideoSession.objects.get(video=video) 
 
-            # Exclude the first message from chat_history
             chat_history = video_session.chat_history[2:]
 
             context = {
                 'video': video,
                 'user_id': user_id,
                 'video_session': video_session,
-                'chat_history': chat_history  # Pass the modified chat history
+                'chat_history': chat_history  
             }
             return render(request, 'ask_yourtube/video_details.html', context)
 
         except VideoSession.DoesNotExist:
-            # Handle the case where VideoSession doesn't exist for the video
             return render(request, 'ask_yourtube/index.html', {'error': 'Video session not found.'})
 
     else:
-        # Redirect to an error page or the home page
         return redirect('ask-yourtube:index') 

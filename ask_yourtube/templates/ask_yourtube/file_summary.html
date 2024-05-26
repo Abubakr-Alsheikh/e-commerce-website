@@ -1,0 +1,34 @@
+<div id="videoSummary" class="mt-4">
+    <div class="d-flex justify-content-between align-items-center px-3">
+        <h3>File Summary</h3>
+        <div>
+            <button type="button" class="btn btn-primary rounded-5" data-bs-toggle="modal" data-bs-target="#transcriptModal">
+                <i class="fas fa-file-alt"></i> Show Transcript 
+            </button>
+        </div>
+    </div>
+    <p id="summaryContent" class="border bg-dark p-4 rounded-5 mt-4 shadow-lg" style="text-align: justify; max-height: 250px; overflow: auto;">{{ summary }}</p>
+
+    <!-- Transcript Modal -->
+    <div class="modal fade" id="transcriptModal" tabindex="-1" aria-labelledby="transcriptModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content bg-secondary border">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="transcriptModalLabel">File Transcript</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="transcriptModalBody">
+                    <p id="transcriptContent">{{ transcript }}</p> 
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="copyTranscriptButton">
+                        <i class="fas fa-copy"></i> Copy Transcript
+                    </button>
+                    <button type="button" class="btn btn-secondary border" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -12,12 +12,17 @@ class UserCustom(models.Model):
         return str(self.user_id)  # Or any other representation you prefer
 
 class Video(models.Model):
-    user_id =  models.ForeignKey(UserCustom, on_delete=models.CASCADE, null=True, blank=True)  # Foreign key to User
+    user_id =  models.ForeignKey(UserCustom, on_delete=models.CASCADE, null=True, blank=True) 
     video_title = models.CharField(max_length=300)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.video_title
+    
+    @property
+    def summary(self):
+        session = self.videosession_set.order_by('-created_at').first()
+        return session.summary if session else ''
 
 class VideoSession(models.Model):
     session_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
