@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
     displayElement(element, "none");
   };
 
-  function animateText(text, element, delay = 20) {
+  function animateText(text, element, delay = 8) {
     element.textContent = "";
     let i = 0;
     const intervalId = setInterval(() => {
@@ -88,15 +88,12 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       // Update UI to show loading state
       askQuestionButton.disabled = true;
+      questionInput.disabled = true;
       sendButtonText.style.display = "none";
       loadingSpinner.style.display = "inline-block";
 
       // Add user message to chat
-      chatMessages.innerHTML += `
-          <div class="user-message">
-            ${question}
-          </div>`;
-      chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+      addUserMessage(question);
 
       const response = await fetch("{% url 'ask-yourtube:ask-question' %}", {
         method: "POST",
@@ -108,24 +105,38 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await response.json();
-
-      // Add AI response to chat
-      const messageContainer = document.createElement("div");
-      messageContainer.classList.add("ai-message");
-      chatMessages.appendChild(messageContainer);
-      animateText(data.answer, messageContainer);
-
-      questionInput.value = ""; // Clear input field
-      chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+      
+      addAIResponse(data.answer); 
     } catch (error) {
       console.error("Error occurred:", error);
       showToast("Something went wrong. Please try again later.","danger");
     } finally {
       // Reset UI from loading state
       askQuestionButton.disabled = false;
+      questionInput.disabled = false;
       sendButtonText.style.display = "inline";
       loadingSpinner.style.display = "none";
     }
+  };
+
+  const addUserMessage = (message) => {
+    const messageElement = document.createElement("div");
+    messageElement.classList.add("user-message");
+    messageElement.textContent = message;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to bottom
+    questionInput.value = ""; // Clear input field
+  };
+
+  const addAIResponse = (message) => {
+    const messageContainer = document.createElement("div");
+    messageContainer.classList.add("ai-message");
+    chatMessages.appendChild(messageContainer);
+  
+    // --- Animated Text ---
+    animateText(message, messageContainer);
+  
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   };
 
   // --- Event Listeners (Common to both pages) ---
@@ -135,6 +146,12 @@ document.addEventListener("DOMContentLoaded", () => {
     askQuestionButton.addEventListener("click", handleAskQuestion);
   }
 
+  questionInput.addEventListener("keyup", (event) => {
+    if (event.key === "Enter") { 
+      handleAskQuestion();
+    }
+  });
+  
   // --- Copy Transcript Button Functionality ---
   if (copyTranscriptButton) {
     copyTranscriptButton.addEventListener("click", () => {
@@ -152,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch((err) => {
           console.error("Failed to copy transcript: ", err);
+          showToast("Failed to copy transcript.","danger")
           // Optional: Show an error message to the user
         });
     });

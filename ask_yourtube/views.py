@@ -9,7 +9,6 @@ import assemblyai as aai
 import google.generativeai as genai
 from .models import Video, VideoSession, UserCustom
 import mimetypes
-# import moviepy.editor as mp
 
 def index(request):
     return render(request, 'ask_yourtube/index.html')
@@ -23,7 +22,7 @@ def _get_genai_model():
     GENERATION_CONFIG = {
         "temperature": 0.7,
         "top_p": 0.95,
-        "top_k": 40,
+        "top_k": 64,
         "max_output_tokens": 1024, # Adjusted for longer potential responses in ask_question
     }
     SAFETY_SETTINGS = [
@@ -31,7 +30,7 @@ def _get_genai_model():
         for cat in ["HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"]
     ]
 
-    return genai.GenerativeModel(model_name="gemini-1.0-pro", 
+    return genai.GenerativeModel(model_name="gemini-1.5-flash", 
                                    generation_config=GENERATION_CONFIG,
                                    safety_settings=SAFETY_SETTINGS)
 
@@ -45,22 +44,27 @@ def analyze_video(request):
     if not user_id or not video_file:
         return JsonResponse({'error': 'User ID and video file are required.'}, status=400)
 
+    try:
+        durationFile = float(request.POST.get('duration', 0)) 
+    except (TypeError, ValueError):
+        return JsonResponse({'error': 'Invalid duration information.'}, status=400)
+    
     # Validate file type
     file_type = mimetypes.guess_type(video_file.name)[0]
     if not file_type.startswith("video/") and not file_type.startswith("audio/"):
         return JsonResponse({'error': 'Invalid file type. Please select a video or audio file.'}, status=400)
 
     # Validate file size
-    MAX_FILE_SIZE_MB = 50  # Replace with your value
+    MAX_FILE_SIZE_MB = 50
     if video_file.size > MAX_FILE_SIZE_MB * 1024 * 1024:
         return JsonResponse({'error': f'File size too large. The maximum allowed size is {MAX_FILE_SIZE_MB}MB.'}, status=400)
 
-    # Validate video duration
-    # MAX_DURATION_MINUTES = 60  # Replace with your value
-    # clip = mp.VideoFileClip(video_file.temporary_file_path())
-    # if clip.duration > MAX_DURATION_MINUTES * 60:
-    #     return JsonResponse({'error': f'Video duration too long. The maximum allowed duration is {MAX_DURATION_MINUTES} minutes.'}, status=400)
-
+    # Validate file duration
+    MAX_DURATION_MINUTES = 15 
+    if durationFile > MAX_DURATION_MINUTES * 60:
+        return JsonResponse({
+            'error': f'Media duration too long. The maximum allowed duration is {MAX_DURATION_MINUTES} minutes.'
+        }, status=400)
     user, _ = UserCustom.objects.get_or_create(user_id=user_id)
     temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
     
@@ -71,12 +75,12 @@ def analyze_video(request):
     transcription = get_transcription(temp_video_path)
     os.remove(temp_video_path)
     if not transcription:
-        return JsonResponse({'error': "Failed to get transcript"}, status=500)
+        return JsonResponse({'error': "Failed to get transcript, please try again."}, status=500)
 
     try:
         model = _get_genai_model()
         chat_session = model.start_chat(history=[])
-        prompt = f"""You will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
+        prompt = f"""You will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content and write it in the same the language of the video. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
         response = chat_session.send_message(prompt)
         generated_summary = response.text  
         # generated_summary = "This is a dummy summary. "  # Replace this with your dummy data

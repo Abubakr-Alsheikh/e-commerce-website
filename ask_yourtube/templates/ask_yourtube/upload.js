@@ -39,10 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const sessionIdInput = document.getElementById("session-id");
   const clearButton = document.getElementById("clearButton");
 
-  const showAlert = (message) => {
-    alert(message);
-  };
-
   const displayElement = (element, display = "block") => {
     element.style.display = display;
   };
@@ -62,42 +58,71 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }, delay);
   }
+
+  let durationOfFile = 0;
   // --- File Handling ---
-
   const validateFile = (file) => {
-    if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
-      showToast(
-        "Invalid file type. Please select a video or audio file.",
-        "warning"
-      );
-      return false;
-    }
-
-    if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      showToast(
-        `File size too large. The maximum allowed size is ${MAX_FILE_SIZE_MB}MB.`,
-        "warning"
-      );
-      return false;
-    }
-
-    if (
-      file.type.startsWith("video/") &&
-      file.duration > MAX_DURATION_MINUTES * 60
-    ) {
-      showToast(
-        `Video duration too long. The maximum allowed duration is ${MAX_DURATION_MINUTES} minutes.`,
-        "warning"
-      );
-      return false;
-    }
-
-    return true;
+    return new Promise((resolve, reject) => { // Wrap validation in a Promise
+      if (!file.type.startsWith("video/") && !file.type.startsWith("audio/")) {
+        showToast(
+          "Invalid file type. Please select a video or audio file.",
+          "warning"
+        );
+        resolve(false); // Resolve with false for invalid type
+        return; 
+      }
+  
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        showToast(
+          `File size too large. The maximum allowed size is ${MAX_FILE_SIZE_MB}MB.`,
+          "warning"
+        );
+        resolve(false); // Resolve with false for large size
+        return; 
+      }
+  
+      // Duration Validation (Async for Video/Audio)
+      if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+        const reader = new FileReader();
+  
+        reader.onload = (e) => {
+          const media = new Audio(e.target.result); 
+          media.onloadedmetadata = () => {
+            durationOfFile = media.duration;
+            if (media.duration > MAX_DURATION_MINUTES * 60) {
+              showToast(
+                `Media duration too long. The maximum allowed duration is ${MAX_DURATION_MINUTES} minutes.`,
+                "warning"
+              );
+              resolve(false); // Resolve with false for long duration
+            } else {
+              resolve(true); // Resolve with true if duration is valid
+            }
+          };
+          media.onerror = () => {
+            console.error("Error loading media metadata.");
+            resolve(false); // Resolve with false if metadata fails
+          };
+        };
+  
+        reader.onerror = () => {
+          console.error("Error reading file.");
+          resolve(false); // Resolve with false if reading fails
+        };
+  
+        reader.readAsDataURL(file); 
+      } else {
+        // For other file types, assume duration validation is not needed
+        resolve(true); 
+      }
+    });
   };
-
-  const handleFileUpload = (file) => {
-    // if (!validateFile(file)) return;
-    uploadFile(file);
+  
+  // Modify handleFileUpload to work with the Promise:
+  const handleFileUpload = async (file) => {
+    if (await validateFile(file)) { // Use await to get the result of the Promise
+      uploadFile(file); 
+    }
   };
 
   const handleDrop = (e) => {
@@ -120,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const formData = new FormData();
     formData.append("video", file);
     formData.append("user_id", userID);
+    formData.append('duration', durationOfFile); 
 
     uploadRequest = new XMLHttpRequest();
     uploadRequest.open("POST", "{% url 'ask-yourtube:analyze-video' %}", true);
@@ -143,7 +169,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         animateText(summaryText, summaryContent);
 
-        progressText.textContent = `Generating a summery from the file`;
         document.getElementById("transcriptContent").textContent =
           data.transcript;
         sessionIdInput.value = data.session_id;
@@ -151,8 +176,6 @@ document.addEventListener("DOMContentLoaded", () => {
         displayElement(postUploadSection);
       } else {
         const data = JSON.parse(this.responseText);
-        console.log(data);
-        console.error("Error during file upload:", this.status);
         showToast(`Error during file upload. ${data.error}`, "danger");
       }
       // Reset upload state
@@ -162,8 +185,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     uploadRequest.onerror = function (errorEvent) {
-      console.error(errorEvent.message);
-      showToast(`Error during file upload. ${errorEvent.message}`, "danger");
+      showToast(`Error during file upload, please try again. ${errorEvent.message}`, "danger");
 
       // Reset upload state
       fileName.textContent = "";
@@ -194,6 +216,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const percentComplete = (e.loaded / e.total) * 100;
       uploadProgressBar.style.width = `${percentComplete}%`;
       progressText.textContent = `${percentComplete.toFixed(1)}%`;
+      if(progressText.textContent == "100.0%"){
+        showToast(`The file uploaded, wait to generate the summary`,"success");
+        progressText.textContent = `Upload Complete`;
+      }
       const uploadedMB = (e.loaded / (1024 * 1024)).toFixed(2);
       const totalMB = (e.total / (1024 * 1024)).toFixed(2);
       uploadedSize.textContent = `${uploadedMB} MB / ${totalMB} MB`;
@@ -218,23 +244,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
   clearButton.addEventListener("click", () => {
     // 1. Reset File Upload:
-    fileInput.value = ""; // This clears the file input element
+    fileInput.value = "";
     fileName.textContent = "";
 
     // 2. Hide Video/Audio Player and Summary:
-    hideElement(postUploadSection); // Assuming you are hiding the entire post upload section
-    displayElement(uploadSection); // Show the upload section again
+    hideElement(postUploadSection); 
+    displayElement(uploadSection);  
 
     // 3. Clear Transcript:
     document.getElementById("transcriptContent").textContent = "";
 
     // 4. Clear Chat Messages:
-    chatMessages.innerHTML = ""; // This clears the content of the chat messages container
+    chatMessages.innerHTML = ""; 
 
     // 5. Reset Session ID (Important for backend):
-    sessionIdInput.value = ""; // Or set to a default value if needed
-
-    // (Optional) You might want to reset other elements or variables related to the previous upload
+    sessionIdInput.value = ""; 
   });
 
   ["dragenter", "dragover", "dragleave", "drop"].forEach((eventName) => {
