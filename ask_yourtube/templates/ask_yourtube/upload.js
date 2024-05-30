@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
             durationOfFile = media.duration;
             if (media.duration > MAX_DURATION_MINUTES * 60) {
               showToast(
-                `Media duration too long. The maximum allowed duration is ${MAX_DURATION_MINUTES} minutes.`,
+                `Media duration too long. The maximum allowed duration is ${MAX_DURATION_MINUTES} minutes. Your video is ${Math.ceil(durationOfFile/60)} minutes long.`,
                 "warning"
               );
               resolve(false); // Resolve with false for long duration

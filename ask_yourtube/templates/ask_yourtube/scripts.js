@@ -103,6 +103,12 @@ document.addEventListener("DOMContentLoaded", () => {
           session_id: sessionIdInput.value,
         }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        showToast(`Error: ${errorData.error}`, "danger");
+        throw new Error(errorData.error); // Re-throw error for better handling
+      }
 
       const data = await response.json();
       

@@ -14,25 +14,21 @@ def index(request):
     return render(request, 'ask_yourtube/index.html')
 
 def _get_genai_model():
-    
     # Configure Google Generative AI
     genai.configure(api_key=settings.GENAI_API_KEY)
-
-    # Generation and Safety configurations
     GENERATION_CONFIG = {
         "temperature": 0.7,
         "top_p": 0.95,
         "top_k": 64,
-        "max_output_tokens": 1024, # Adjusted for longer potential responses in ask_question
+        "max_output_tokens": 1024,
     }
     SAFETY_SETTINGS = [
         {"category": f"HARM_CATEGORY_{cat}", "threshold": "BLOCK_MEDIUM_AND_ABOVE"} 
         for cat in ["HARASSMENT", "HATE_SPEECH", "SEXUALLY_EXPLICIT", "DANGEROUS_CONTENT"]
     ]
-
     return genai.GenerativeModel(model_name="gemini-1.5-flash", 
-                                   generation_config=GENERATION_CONFIG,
-                                   safety_settings=SAFETY_SETTINGS)
+                                    generation_config=GENERATION_CONFIG,
+                                    safety_settings=SAFETY_SETTINGS)
 
 @csrf_exempt
 def analyze_video(request):
@@ -63,22 +59,25 @@ def analyze_video(request):
     MAX_DURATION_MINUTES = 15 
     if durationFile > MAX_DURATION_MINUTES * 60:
         return JsonResponse({
-            'error': f'Media duration too long. The maximum allowed duration is {MAX_DURATION_MINUTES} minutes.'
+            'error': f'Media duration too long. The maximum allowed duration is {MAX_DURATION_MINUTES} minutes. Your video is {durationFile/60:.2f} minutes long.'
         }, status=400)
     user, _ = UserCustom.objects.get_or_create(user_id=user_id)
     temp_video_path = os.path.join(settings.MEDIA_ROOT, f"temp_video_{uuid.uuid4()}.mp4")
     
-    with open(temp_video_path, 'wb+') as destination:
-        for chunk in video_file.chunks():
-            destination.write(chunk)
-    
-    transcription = get_transcription(temp_video_path)
-    os.remove(temp_video_path)
-    if not transcription:
-        return JsonResponse({'error': "Failed to get transcript, please try again."}, status=500)
-
     try:
+        with open(temp_video_path, 'wb+') as destination:
+            for chunk in video_file.chunks():
+                destination.write(chunk)
+    
+        transcription = get_transcription(temp_video_path)
+        os.remove(temp_video_path)
+        if not transcription:
+            return JsonResponse({'error': "Failed to get transcript, please try again."}, status=500)
+        
         model = _get_genai_model()
+        if not model:
+            return JsonResponse({'error': "Failed to load GenAI model. Please try again later."}, status=500)
+
         chat_session = model.start_chat(history=[])
         prompt = f"""You will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content and write it in the same the language of the video. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
         response = chat_session.send_message(prompt)
@@ -95,7 +94,8 @@ def analyze_video(request):
 
         return JsonResponse({'summary': generated_summary, 'session_id': session.session_id, 'user_id': user_id, 'transcript': session.transcript})
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        os.remove(temp_video_path)
+        return JsonResponse({'error': f"Something went wrong. Please try again later. Details: {e}"}, status=500)
 
 
 @csrf_exempt
@@ -112,6 +112,9 @@ def ask_question(request):
     
     try:
         model = _get_genai_model()
+        if not model:
+            return JsonResponse({'error': "Failed to load GenAI model. Please try again later."}, status=500)
+
         session = VideoSession.objects.get(session_id=session_id)
         chat_session = model.start_chat(history=session.chat_history)
         response = chat_session.send_message(question) 
@@ -125,8 +128,10 @@ def ask_question(request):
         session.save()
 
         return JsonResponse({'answer': generated_answer})
+    except VideoSession.DoesNotExist:
+        return JsonResponse({'error': 'Session not found. Please try analyzing a video again.'}, status=404)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': f"Something went wrong. Please try again later. Details: {e}"}, status=500)
     
 def detect_language(audio_url):
     config = aai.TranscriptionConfig(
@@ -135,8 +140,11 @@ def detect_language(audio_url):
         speech_model=aai.SpeechModel.nano,
     )
     transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(audio_url, config=config)
-    return transcript.json_response["language_code"]
+    try:
+        transcript = transcriber.transcribe(audio_url, config=config)
+        return transcript.json_response["language_code"]
+    except Exception as e:
+        return None
 
 def transcribe_file(audio_url, language_code):
     supported_languages_for_best = {'en-US', 'en-GB', 'es-ES', 'fr-FR', 'de-DE', 'it-IT', 'nl-NL', 'pt-BR', 'tr-TR', 'ru-RU', 'hi-IN', 'ta-IN', 'mr-IN'}
@@ -149,13 +157,22 @@ def transcribe_file(audio_url, language_code):
         ),
     )
     transcriber = aai.Transcriber()
-    transcript = transcriber.transcribe(audio_url, config=config)
-    return transcript
+    try:
+        transcript = transcriber.transcribe(audio_url, config=config)
+        return transcript
+    except Exception as e:
+        return None
 
 def get_transcription(audio_file):
     aai.settings.api_key = settings.ASSEMBLYAI_API_KEY
     language_code = detect_language(audio_file)
+    if not language_code:
+        return None
+
     transcript = transcribe_file(audio_file, language_code)
+    if not transcript:
+        return None
+
     return transcript.text
     # return "This is a dummy transcription. "  # Replace this with your dummy data
 
