@@ -22,4 +22,5 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('', include('core.urls')),
     path('askvid/', include('ask_yourtube.urls')),
+    path('screen-scene/', include('screen_scene.urls')),
 ]

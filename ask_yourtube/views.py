@@ -79,7 +79,7 @@ def analyze_video(request):
             return JsonResponse({'error': "Failed to load GenAI model. Please try again later."}, status=500)
 
         chat_session = model.start_chat(history=[])
-        prompt = f"""You will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content and write it in the same the language of the video. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
+        prompt = f"""Your name is Vid in web application called AskVid and have been developed by Abubakr Alsheikh, and you will be provided with a transcript of a video. Please analyze it and write a concise summary of the video's content and write it in the same the language of the video. After you provide the summary, a user will be able to ask you questions about the video. You should use your knowledge of the transcript to answer those questions comprehensively and accurately. Here is the title of the video: {video_file.name}\n Here is the video transcript: \n{transcription}\n Summary: """
         response = chat_session.send_message(prompt)
         generated_summary = response.text  
         # generated_summary = "This is a dummy summary. "  # Replace this with your dummy data
