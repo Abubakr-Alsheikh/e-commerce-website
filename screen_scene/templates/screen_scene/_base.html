@@ -1,0 +1,310 @@
+{% load compress %} {% load static %}
+
+<!DOCTYPE html>
+<html lang="en" class="flex flex-col h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block head_title %}{% endblock %}</title>
+
+    {% compress css %}
+    <link rel="stylesheet" href="{% static 'src/output.css' %}" />
+    {% endcompress %}
+    <script>
+      // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+      if (
+        localStorage.getItem("color-theme") === "dark" ||
+        (!("color-theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    </script>
+    <style>
+      #toast-container {
+        position: fixed; 
+        top: 1rem; 
+        right: 1rem; 
+        z-index: 1000; 
+        min-width: 300px;
+      }
+      .toast {
+        position: relative; 
+        max-width: 300px;
+        margin-bottom: 1rem; 
+        overflow: hidden; 
+      }
+      .toast-enter-active, .toast-leave-active {
+        transition: all 0.5s ease; 
+      }
+      .toast-enter-from, .toast-leave-to {
+        opacity: 0; 
+        transform: translateX(100%); 
+      }
+    </style>
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <body class="bg-white dark:bg-gray-800 overflow-x-hidden relative flex flex-col h-full">
+    {% include 'screen_scene/components/nav.html'%}
+
+    <div class="container mx-auto flex-1">
+      {% block content %} {% endblock content %}
+    </div>
+
+    {% include 'screen_scene/components/footer.html'%}
+
+    <div id="toast-container"></div>
+
+    {% if messages %}
+      <ul class="messages hidden">
+        {% for message in messages %}
+          <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <script>
+      var themeToggleDarkIcon = document.getElementById(
+        "theme-toggle-dark-icon"
+      );
+      var themeToggleLightIcon = document.getElementById(
+        "theme-toggle-light-icon"
+      );
+
+      // Change the icons inside the button based on previous settings
+      if (
+        localStorage.getItem("color-theme") === "dark" ||
+        (!("color-theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        themeToggleLightIcon.classList.remove("hidden");
+      } else {
+        themeToggleDarkIcon.classList.remove("hidden");
+      }
+
+      var themeToggleBtn = document.getElementById("theme-toggle");
+
+      themeToggleBtn.addEventListener("click", function () {
+        // toggle icons inside button
+        themeToggleDarkIcon.classList.toggle("hidden");
+        themeToggleLightIcon.classList.toggle("hidden");
+
+        // if set via local storage previously
+        if (localStorage.getItem("color-theme")) {
+          if (localStorage.getItem("color-theme") === "light") {
+            document.documentElement.classList.add("dark");
+            localStorage.setItem("color-theme", "dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+            localStorage.setItem("color-theme", "light");
+          }
+
+          // if NOT set via local storage previously
+        } else {
+          if (document.documentElement.classList.contains("dark")) {
+            document.documentElement.classList.remove("dark");
+            localStorage.setItem("color-theme", "light");
+          } else {
+            document.documentElement.classList.add("dark");
+            localStorage.setItem("color-theme", "dark");
+          }
+        }
+      });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.4.1/dist/flowbite.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          const messages = document.querySelectorAll('.messages li');
+          messages.forEach(message => {
+              const messageType = message.classList.contains('success') || message.classList.contains('info') ? 'success' : 'error'; // Determine toast type
+              showToast(messageType, message.textContent); 
+          });
+
+          const favoriteButtons = document.querySelectorAll('.favorite-button'); 
+          favoriteButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  const movieId = this.dataset.movieId; 
+                  toggleFavorite(movieId); 
+              });
+          });
+      });
+      function showToast(type, message) {
+        const toastContainer = document.getElementById('toast-container');
+
+        const toastId = `toast-${Date.now()}`; // Unique ID
+        const toastTemplate = `
+          <div id="${toastId}" class="toast flex items-center w-full max-w-xs p-4 mb-4 text-gray-500 bg-white rounded-lg shadow dark:text-gray-400 dark:bg-gray-900" role="alert">
+            <div class="inline-flex items-center justify-center flex-shrink-0 w-8 h-8 text-${type === 'success' ? 'green' : 'red'}-500 bg-${type === 'success' ? 'green' : 'red'}-100 rounded-lg dark:bg-${type === 'success' ? 'green' : 'red'}-800 dark:text-${type === 'success' ? 'green' : 'red'}-200">
+              <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
+                ${type === 'success' ? '<path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 8.207-4 4a1 1 0 0 1-1.414 0l-2-2a1 1 0 0 1 1.414-1.414L9 10.586l3.293-3.293a1 1 0 0 1 1.414 1.414Z"/>' : 
+                                        '<path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5Zm3.707 11.793a1 1 0 1 1-1.414 1.414L10 11.414l-2.293 2.293a1 1 0 0 1-1.414-1.414L8.586 10 6.293 7.707a1 1 0 0 1 1.414-1.414L10 8.586l2.293-2.293a1 1 0 0 1 1.414 1.414L11.414 10l2.293 2.293Z"/>'}
+              </svg>
+              <span class="sr-only">${type === 'success' ? 'Check icon' : 'Error icon'}</span>
+            </div>
+            <div class="ms-3 text-sm font-normal">${message}</div>
+            <button type="button" class="ms-auto -mx-1.5 -my-1.5 bg-white text-gray-400 hover:text-gray-900 rounded-lg focus:ring-2 focus:ring-gray-300 p-1.5 hover:bg-gray-100 inline-flex items-center justify-center h-8 w-8 dark:text-gray-500 dark:hover:text-white dark:bg-gray-800 dark:hover:bg-gray-700" data-toast-id="${toastId}" aria-label="Close">
+              <span class="sr-only">Close</span>
+              <svg class="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+              </svg>
+            </button>
+          </div>
+        `;
+
+        const toastElement = document.createElement('div'); // Create a new div element
+        toastElement.innerHTML = toastTemplate;
+        toastContainer.appendChild(toastElement);
+
+        // Add event listener to close button
+        toastElement.querySelector('button').addEventListener('click', () => {
+          // Initiate removal transition 
+          toastElement.classList.add('toast-leave-active');
+          toastElement.classList.add('toast-leave-to');
+
+          // Remove the toast after the transition
+          setTimeout(() => {
+            toastElement.remove(); 
+          }, 500); // Adjust delay to match CSS transition duration 
+        });
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+          // Initiate removal transition 
+          toastElement.classList.add('toast-leave-active');
+          toastElement.classList.add('toast-leave-to');
+
+          // Remove the toast after the transition
+          setTimeout(() => {
+            toastElement.remove(); 
+          }, 500); // Adjust delay to match CSS transition duration 
+        }, 3000);
+      }
+    </script>
+    <script>
+      function toggleFavorite(movieId) {
+        const button = document.querySelector(`.favorite-button[data-movie-id="${movieId}"]`); // Target the button dynamically
+        const isFavorite = JSON.parse(button.dataset.isFavorite);
+        const loadingIndicator = button.querySelector('.loading-indicator');
+        const tooltip = document.getElementById(`tooltip-add-to-favorites-${movieId}`);
+        let tooltipText = button.querySelector('.tooltip-text');
+        if(tooltipText == null){
+          tooltipText = tooltip.querySelector('.tooltip-text');
+        }
+        console.log(tooltipText);
+        const svg = button.querySelector(`svg`);
+
+        // Disable button and show loading indicator
+        button.disabled = true;
+        loadingIndicator.classList.remove('hidden');
+        svg.classList.add('opacity-10');
+
+        fetch('{% url "screen-scene:toggle_favorite" 0 %}'.replace('0', movieId), { 
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => {
+            if (!response.ok) { 
+                if (response.status === 401) {
+                    return response.json().then(data => {
+                        if (data.not_logged_in) {
+                            showToast('danger', 'Please log in to add to favorites.');
+                        } else {
+                            showToast('danger', 'Please log in to add to favorites.');
+                            throw new Error('Not logged in.'); 
+                        }
+                    });
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json(); 
+        })
+        .then(data => {
+            if (data.is_favorite) {
+                button.dataset.isFavorite = 'true';
+                button.querySelector('svg').classList.remove('fill-gray-500');
+                button.querySelector('svg').classList.add('fill-red-500');
+                tooltipText.textContent = 'Remove from favorites'; 
+                showToast('success', 'Movie added to favorites!');
+            } else {
+                button.dataset.isFavorite = 'false';
+                button.querySelector('svg').classList.remove('fill-red-500');
+                button.querySelector('svg').classList.add('fill-gray-500');
+                tooltipText.textContent = 'Add to favorites'; 
+                showToast('success', 'Movie removed from favorites!');
+            }
+        })
+        .finally(() => { 
+            button.disabled = false;
+            loadingIndicator.classList.add('hidden');
+            svg.classList.remove('opacity-10');
+        });
+      }
+      
+      // Function to attach event listeners to favorite buttons 
+      function attachFavoriteButtonListeners(container = document) {
+          const favoriteButtons = container.querySelectorAll('.favorite-button');
+          favoriteButtons.forEach(button => {
+              button.addEventListener('click', function() {
+                  const movieId = this.dataset.movieId;
+                  toggleFavorite(movieId);
+              });
+          });
+      }
+      
+      function handleShowMore(buttonId, containerId, spinnerId, url, dataFunction) {
+        const showMoreButton = document.getElementById(buttonId);
+        const container = document.getElementById(containerId);
+        const spinner = document.getElementById(spinnerId);
+
+        if (showMoreButton) {
+            showMoreButton.addEventListener('click', function () {
+            const startFrom = this.dataset.nextPage;
+            const data = dataFunction ? dataFunction(this) : `start_from=${startFrom}`; // Get additional data if needed
+
+            // Disable button and show spinner
+            showMoreButton.disabled = true;
+            showMoreButton.classList.add('opacity-50'); 
+            spinner.classList.remove('hidden');
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}' 
+                },
+                body: data 
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.html) {
+                    container.innerHTML += data.html;
+                    showMoreButton.dataset.nextPage = parseInt(startFrom) + 8; // Assuming you load 8 items per request
+                    attachFavoriteButtonListeners(container);
+                } else {
+                    this.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('danger', 'An error occurred while loading more items.');
+                this.style.display = 'none';
+            })
+            .finally(() => {
+                // Re-enable button and hide spinner
+                showMoreButton.disabled = false;
+                showMoreButton.classList.remove('opacity-50'); 
+                spinner.classList.add('hidden');
+            });
+          });
+        }
+      }
+    </script> 
+    {% block extra_body %}{% endblock %}
+  </body>
+</html>
