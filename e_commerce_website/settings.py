@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import os
 
@@ -21,6 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
+# TODO: Adding the secret key to the .env file
 SECRET_KEY = "django-insecure-q53l#&(#a25nqx#km&sj8uioln38jp)z9jt9xqu#tt%s2b2ct!"
 
 # SECURITY WARNING: don't run with debug turned on in production!
@@ -46,10 +48,14 @@ INSTALLED_APPS = [
     "django_countries",
     "corsheaders",
     "compressor",
+    "rest_framework",
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist', # For blacklisting tokens
     # Custome apps
     "core",
     "ask_yourtube",
     "screen_scene",
+    "intellido"
 ]
 
 MIDDLEWARE = [
@@ -65,7 +71,13 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+
+# Allow requests from your GitHub Pages domain
+CORS_ALLOWED_ORIGINS = [
+    'https://abubakr-alsheikh.github.io',
+    'http://localhost:3000',
+]
 
 ROOT_URLCONF = "e_commerce_website.urls"
 
@@ -130,6 +142,23 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,  # Ensure refresh tokens don't stay valid forever
+    'BLACKLIST_AFTER_ROTATION': True, # Blacklist old refresh tokens
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY, # Use your secret key here
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    # ... other settings
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
@@ -152,6 +181,8 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "static"),
 ]
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
@@ -169,7 +200,11 @@ COMPRESS_ROOT = BASE_DIR / "static"
 
 COMPRESS_ENABLED = True
 
-STATICFILES_FINDERS = ("compressor.finders.CompressorFinder",)
+STATICFILES_FINDERS = (
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "compressor.finders.CompressorFinder",
+)
 
 # Handle .env file
 def load_env(env_path=".env"):
