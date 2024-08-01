@@ -1,6 +1,6 @@
 from django.urls import path, include 
 from rest_framework.routers import DefaultRouter
-from .views import TaskViewSet, SignupView # Import your viewsets
+from .views import TaskViewSet, SignupView, ChatHistoryViewSet # Import your viewsets
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -9,6 +9,7 @@ from rest_framework_simplejwt.views import (
 
 router = DefaultRouter()
 router.register(r'tasks', TaskViewSet, basename='task') # Register TaskViewSet with the router
+router.register(r'chat', ChatHistoryViewSet, basename='chat') # Register TaskViewSet with the router
 
 urlpatterns = [
     path('', include(router.urls)),  # InclFude URLs from the router

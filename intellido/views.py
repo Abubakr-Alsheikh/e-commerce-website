@@ -1,14 +1,42 @@
+from datetime import time
+import os
+from django.conf import settings
 from rest_framework import viewsets, permissions
 from rest_framework.response import Response
-from .models import Task
+from .models import Task, ChatHistory
 from .serializers import TaskSerializer
 from django.contrib.auth import get_user_model
 from rest_framework import status
-from rest_framework.generics import CreateAPIView
+from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserSerializer
+from .serializers import UserSerializer, ChatHistorySerializer
+import google.generativeai as genai
+
+
+class SignupView(CreateAPIView):
+    queryset = get_user_model().objects.all()
+    permission_classes = [AllowAny]
+    serializer_class = UserSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        # Generate tokens for the new user
+        refresh = RefreshToken.for_user(user)
+        access_token = refresh.access_token
+
+        data = {
+            "user": serializer.data,
+            "refresh": str(refresh),
+            "access": str(access_token),
+        }
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -59,23 +87,156 @@ class TaskViewSet(viewsets.ModelViewSet):
         return Response(status=204)  # 204 No Content
 
 
-class SignupView(CreateAPIView):
-    queryset = get_user_model().objects.all()
-    permission_classes = [AllowAny]
-    serializer_class = UserSerializer
+genai.configure(api_key=settings.GENAI_API_KEY)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+generation_config = {
+    "temperature": 1,
+    "top_p": 0.95,
+    "top_k": 64,
+    "max_output_tokens": 8192,
+    "response_mime_type": "text/plain",
+}
 
-        # Generate tokens for the new user
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    generation_config=generation_config,
+)
 
-        data = {
-            "user": serializer.data,
-            "refresh": str(refresh),
-            "access": str(access_token),
+
+def upload_to_gemini(path, mime_type=None):
+    """Uploads the given file to Gemini.
+
+    See https://ai.google.dev/gemini-api/docs/prompting_with_media
+    """
+    file = genai.upload_file(path, mime_type=mime_type)
+    print(f"Uploaded file '{file.display_name}' as: {file.uri}")
+    return file
+
+
+def wait_for_files_active(files):
+    """Waits for the given files to be active.
+
+    Some files uploaded to the Gemini API need to be processed before they can be
+    used as prompt inputs. The status can be seen by querying the file's "state"
+    field.
+
+    This implementation uses a simple blocking polling loop. Production code
+    should probably employ a more sophisticated approach.
+    """
+    print("Waiting for file processing...")
+    for name in (file.name for file in files):
+        file = genai.get_file(name)
+        while file.state.name == "PROCESSING":
+            time.sleep(10)
+            file = genai.get_file(name)
+        if file.state.name != "ACTIVE":
+            raise Exception(f"File {file.name} failed to process")
+
+
+class ChatHistoryViewSet(viewsets.ModelViewSet):
+    serializer_class = ChatHistorySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    # parser_classes = [MultiPartParser, FormParser] # For handling file uploads
+    # parser_classes = (MultiPartParser, FormParser)
+
+    def get_queryset(self):
+        """Return the chat history for the currently authenticated user."""
+        return ChatHistory.objects.filter(user=self.request.user)
+
+    def create(self, request):
+        user = request.user
+        chat_history, created = ChatHistory.objects.get_or_create(user=user)
+        new_message = {
+            "role": "user",
+            "parts": [],
         }
-        return Response(data, status=status.HTTP_201_CREATED)
+
+        uploaded_file = request.FILES.get("file")  # Get the uploaded file
+        if uploaded_file:
+            # File upload logic
+            file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.name)
+            with open(file_path, "wb+") as destination:
+                for chunk in uploaded_file.chunks():
+                    destination.write(chunk)
+
+            # Upload to Gemini
+            try:
+                gemini_file = upload_to_gemini(file_path, uploaded_file.content_type)
+                wait_for_files_active(gemini_file)
+                new_message["parts"].append(gemini_file)
+                # new_message["parts"].append(file_path)
+            except Exception as e:
+                return Response(
+                    {"error": f"Failed to upload file to Gemini: {str(e)}"}, status=500
+                )
+            finally:
+                # Optionally delete the file after uploading to Gemini
+                os.remove(file_path)
+
+        user_message = request.data.get("content")
+        if user_message:
+            new_message["parts"].append(user_message)
+
+        if new_message["parts"]:  # Check if the message has any content (file or text)
+            chat_history.current_chat.append(new_message)
+
+            # Prepare history for Gemini
+            gemini_history = chat_history.current_chat
+
+            # Start a new chat session if the history is empty
+            if not gemini_history:
+                chat_session = model.start_chat()
+            else:
+                chat_session = model.start_chat(history=gemini_history)
+            if user_message:
+                response = chat_session.send_message("You will help the user to manage his tasks into list")
+                response = response.text
+                # response = user_message
+                # Add AI response to chat history
+                ai_message = {
+                    "role": "model",
+                    "parts": [response],
+                }  # Using 'parts' for consistency
+                chat_history.current_chat.append(ai_message)
+            chat_history.save()
+
+            return Response(response, status=201)
+        else:
+            return Response({"error": "Message cannot be empty."}, status=400)
+
+    @action(
+        detail=False, methods=["POST"], url_path="clear"
+    )  # Use detail=True for actions on a specific instance
+    def clear_chat_history(self, request, pk=None):
+        user = request.user  # Get the authenticated user
+        chat_history, created = ChatHistory.objects.get_or_create(user=user)
+        chat_history.clear_current_chat()
+        return Response({"detail": "Chat history cleared successfully."})
+
+    def update(self, request, pk=None):
+        """Update a chat history (not typically used for chat)."""
+        # You might not need this method,
+        # but it's here for completeness in case you have
+        # specific update logic for the entire chat history.
+        chat_history = self.get_object()
+        if chat_history.user != request.user:
+            return Response(
+                {"detail": "You do not have permission to perform this action."},
+                status=403,
+            )
+
+        serializer = self.get_serializer(chat_history, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def destroy(self, request, pk=None):
+        """Delete a chat history (only for the chat history owner)."""
+        chat_history = self.get_object()
+        if chat_history.user != request.user:
+            return Response(
+                {"detail": "You do not have permission to perform this action."},
+                status=403,
+            )
+        chat_history.delete()
+        return Response(status=204)
