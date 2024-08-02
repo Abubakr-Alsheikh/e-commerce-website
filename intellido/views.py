@@ -103,34 +103,14 @@ model = genai.GenerativeModel(
 )
 
 
-def upload_to_gemini(path, mime_type=None):
+def upload_to_gemini(path, display_name=None, mime_type=None):
     """Uploads the given file to Gemini.
 
     See https://ai.google.dev/gemini-api/docs/prompting_with_media
     """
-    file = genai.upload_file(path, mime_type=mime_type)
+    file = genai.upload_file(path, display_name=display_name, mime_type=mime_type)
     print(f"Uploaded file '{file.display_name}' as: {file.uri}")
     return file
-
-
-def wait_for_files_active(files):
-    """Waits for the given files to be active.
-
-    Some files uploaded to the Gemini API need to be processed before they can be
-    used as prompt inputs. The status can be seen by querying the file's "state"
-    field.
-
-    This implementation uses a simple blocking polling loop. Production code
-    should probably employ a more sophisticated approach.
-    """
-    print("Waiting for file processing...")
-    for name in (file.name for file in files):
-        file = genai.get_file(name)
-        while file.state.name == "PROCESSING":
-            time.sleep(10)
-            file = genai.get_file(name)
-        if file.state.name != "ACTIVE":
-            raise Exception(f"File {file.name} failed to process")
 
 
 class ChatHistoryViewSet(viewsets.ModelViewSet):
@@ -161,8 +141,9 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
 
             # Upload to Gemini
             try:
-                gemini_file = upload_to_gemini(file_path, uploaded_file.content_type)
-                wait_for_files_active(gemini_file)
+                gemini_file = upload_to_gemini(
+                    file_path, uploaded_file.name, uploaded_file.content_type
+                )
                 new_message["parts"].append(gemini_file)
                 # new_message["parts"].append(file_path)
             except Exception as e:
@@ -178,7 +159,6 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
             new_message["parts"].append(user_message)
 
         if new_message["parts"]:  # Check if the message has any content (file or text)
-            chat_history.current_chat.append(new_message)
 
             # Prepare history for Gemini
             gemini_history = chat_history.current_chat
@@ -189,14 +169,18 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
             else:
                 chat_session = model.start_chat(history=gemini_history)
             if user_message:
-                response = chat_session.send_message("You will help the user to manage his tasks into list")
+                response = chat_session.send_message(new_message["parts"])
                 response = response.text
                 # response = user_message
+
                 # Add AI response to chat history
                 ai_message = {
                     "role": "model",
                     "parts": [response],
                 }  # Using 'parts' for consistency
+                if uploaded_file != None:
+                    new_message["parts"][0] = uploaded_file.name
+                chat_history.current_chat.append(new_message)
                 chat_history.current_chat.append(ai_message)
             chat_history.save()
 
