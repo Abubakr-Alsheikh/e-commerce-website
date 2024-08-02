@@ -141,9 +141,7 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
 
             # Upload to Gemini
             try:
-                gemini_file = upload_to_gemini(
-                    file_path, uploaded_file.name, uploaded_file.content_type
-                )
+                gemini_file = upload_to_gemini(file_path, uploaded_file.content_type)
                 new_message["parts"].append(gemini_file)
                 # new_message["parts"].append(file_path)
             except Exception as e:
