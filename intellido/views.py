@@ -124,7 +124,7 @@ def upload_to_gemini(path, display_name=None, mime_type=None):
     See https://ai.google.dev/gemini-api/docs/prompting_with_media
     """
     file = genai.upload_file(path, display_name=display_name, mime_type=mime_type)
-    print(f"Uploaded file '{file.display_name}' as: {file.uri}")
+    print(f"Uploaded file '{file.name}' as: {file.uri}")
     return file
 
 
@@ -155,7 +155,10 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
 
             # Upload to Gemini
             try:
-                gemini_file = upload_to_gemini(file_path, uploaded_file.content_type)
+                gemini_file = upload_to_gemini(
+                    file_path, uploaded_file.name, uploaded_file.content_type
+                )
+
                 new_message["parts"].append(gemini_file)
             except Exception as e:
                 return Response(
