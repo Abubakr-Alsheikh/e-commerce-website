@@ -1,6 +1,6 @@
-from django.urls import path, include 
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import TaskViewSet, SignupView, ChatHistoryViewSet # Import your viewsets
+from .views import TaskViewSet, SignupView, ChatHistoryViewSet
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -8,13 +8,13 @@ from rest_framework_simplejwt.views import (
 )
 
 router = DefaultRouter()
-router.register(r'tasks', TaskViewSet, basename='task') # Register TaskViewSet with the router
-router.register(r'chat', ChatHistoryViewSet, basename='chat') # Register TaskViewSet with the router
+router.register(r"tasks", TaskViewSet, basename="task")
+router.register(r"chat", ChatHistoryViewSet, basename="chat")
 
 urlpatterns = [
-    path('', include(router.urls)),  # InclFude URLs from the router
-    path('api/signup/', SignupView.as_view(), name='signup'),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path("", include(router.urls)),  # InclFude URLs from the router
+    path("api/signup/", SignupView.as_view(), name="signup"),
+    path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
 ]

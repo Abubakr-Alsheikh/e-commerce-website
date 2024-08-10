@@ -1,4 +1,5 @@
 from datetime import time
+import json
 import os
 from django.conf import settings
 from rest_framework import viewsets, permissions
@@ -11,10 +12,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.generics import CreateAPIView
 from rest_framework.permissions import AllowAny
-from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, ChatHistorySerializer
 import google.generativeai as genai
+from rest_framework.exceptions import APIException
 
 
 class SignupView(CreateAPIView):
@@ -24,19 +25,33 @@ class SignupView(CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        try:
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
 
-        # Generate tokens for the new user
-        refresh = RefreshToken.for_user(user)
-        access_token = refresh.access_token
+            # Generate tokens for the new user
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
 
-        data = {
-            "user": serializer.data,
-            "refresh": str(refresh),
-            "access": str(access_token),
-        }
-        return Response(data, status=status.HTTP_201_CREATED)
+            data = {
+                "user": serializer.data,
+                "refresh": str(refresh),
+                "access": str(access_token),
+            }
+            return Response(data, status=status.HTTP_201_CREATED)
+        except APIException as e:
+            # Handle specific API exceptions
+            error_data = {
+                "detail": e.detail,
+            }
+            return Response(error_data, status=e.status_code)
+
+        except Exception as e:
+            # Handle other general exceptions
+            error_data = {
+                "detail": str(e),
+            }
+            return Response(error_data, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -116,12 +131,11 @@ def upload_to_gemini(path, display_name=None, mime_type=None):
 class ChatHistoryViewSet(viewsets.ModelViewSet):
     serializer_class = ChatHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
-    # parser_classes = [MultiPartParser, FormParser] # For handling file uploads
-    # parser_classes = (MultiPartParser, FormParser)
 
     def get_queryset(self):
         """Return the chat history for the currently authenticated user."""
-        return ChatHistory.objects.filter(user=self.request.user)
+        chat = ChatHistory.objects.filter(user=self.request.user)
+        return chat
 
     def create(self, request):
         user = request.user
@@ -143,7 +157,6 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
             try:
                 gemini_file = upload_to_gemini(file_path, uploaded_file.content_type)
                 new_message["parts"].append(gemini_file)
-                # new_message["parts"].append(file_path)
             except Exception as e:
                 return Response(
                     {"error": f"Failed to upload file to Gemini: {str(e)}"}, status=500
@@ -158,18 +171,55 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
 
         if new_message["parts"]:  # Check if the message has any content (file or text)
 
-            # Prepare history for Gemini
-            gemini_history = chat_history.current_chat
-
             # Start a new chat session if the history is empty
-            if not gemini_history:
-                chat_session = model.start_chat()
-            else:
-                chat_session = model.start_chat(history=gemini_history)
+            if not chat_history.current_chat:
+                prompt_file_path = os.path.join(
+                    settings.MEDIA_ROOT, "initial_prompt.txt"
+                )
+
+                try:
+                    with open(prompt_file_path, "r") as f:
+                        initial_prompt = f.read()
+                except FileNotFoundError:
+                    initial_prompt = "I'm having trouble loading my initial instructions! Please try again later."
+
+                chat_history.current_chat.insert(
+                    0,
+                    {
+                        "role": "user",
+                        "parts": [initial_prompt],
+                    },
+                )
+            chat_session = model.start_chat(history=chat_history.current_chat)
             if user_message:
                 response = chat_session.send_message(new_message["parts"])
                 response = response.text
-                # response = user_message
+#                 response = """Sure, I can help you with that! I've analyzed the image you've provided. Here are some tasks that you might want to consider related to your database:
+
+# ```json
+# [
+#   {
+#     "title": "Identify Primary Keys",
+#     "description": "Go through each table and confirm the primary key for each one. Verify that they are correctly identified and understood."
+#   },
+#   {
+#     "title": "Define Foreign Keys",
+#     "description": "Identify any relationships between tables, and specify the foreign keys that connect them. Ensure the foreign keys are referencing the correct primary keys."
+#   },
+#   {
+#     "title": "Document Data Types",
+#     "description": "For each column in your database, document the data type you plan to use (e.g., integer, string, date). Choose the most appropriate data type for each column."
+#   },
+#   {
+#     "title": "Consider Data Integrity",
+#     "description": "Think about potential data integrity constraints, such as unique values, data range limits, or required fields. You might implement these as constraints in your database design."
+#   },
+#   {
+#     "title": "Normalize Database Design",
+#     "description": "Evaluate if your current database design follows normalization principles. If not, consider refactoring to improve data redundancy and consistency."
+#   }
+# ]
+# ```"""
 
                 # Add AI response to chat history
                 ai_message = {
@@ -177,12 +227,17 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     "parts": [response],
                 }  # Using 'parts' for consistency
                 if uploaded_file != None:
-                    new_message["parts"][0] = uploaded_file.name
+                    new_message["parts"][0] = gemini_file.uri
                 chat_history.current_chat.append(new_message)
                 chat_history.current_chat.append(ai_message)
             chat_history.save()
 
-            return Response(response, status=201)
+            return Response(
+                {
+                    "parts": response,
+                },
+                status=201,
+            )
         else:
             return Response({"error": "Message cannot be empty."}, status=400)
 

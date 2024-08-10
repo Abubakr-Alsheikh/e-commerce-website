@@ -12,7 +12,6 @@ class Task(models.Model):
     parent_task = models.ForeignKey(
         "self", on_delete=models.CASCADE, null=True, blank=True, related_name="subtasks"
     )
-
     def __str__(self):
         return self.title
 
@@ -28,7 +27,7 @@ class ChatHistory(models.Model):
 
     def clear_current_chat(self):
         """Clears the current chat and appends it to the full history."""
-        self.full_history.extend(self.current_chat)
+        self.full_history.extend(self.current_chat[1:])
         self.current_chat = []
         self.save()
 

@@ -21,9 +21,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
+# Handle .env file
+def load_env(env_path=".env"):
+    """Loads environment variables from a .env file."""
+    with open(env_path) as f:
+        for line in f:
+            if (
+                line.startswith("#") or not line.strip()
+            ):  # Skip comments and empty lines
+                continue
+            key, value = line.strip().split("=", 1)
+            os.environ[key] = value
+
+load_env()
+
 # SECURITY WARNING: keep the secret key used in production secret!
-# TODO: Adding the secret key to the .env file
-SECRET_KEY = "django-insecure-q53l#&(#a25nqx#km&sj8uioln38jp)z9jt9xqu#tt%s2b2ct!"
+SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -50,7 +63,7 @@ INSTALLED_APPS = [
     "compressor",
     "rest_framework",
     'rest_framework_simplejwt',
-    'rest_framework_simplejwt.token_blacklist', # For blacklisting tokens
+    'rest_framework_simplejwt.token_blacklist',
     # Custome apps
     "core",
     "ask_yourtube",
@@ -73,7 +86,7 @@ MIDDLEWARE = [
 
 # CORS_ALLOW_ALL_ORIGINS = True
 
-# Allow requests from your GitHub Pages domain
+# Allow requests from GitHub Pages domain
 CORS_ALLOWED_ORIGINS = [
     'https://abubakr-alsheikh.github.io',
     'http://localhost:3000',
@@ -154,10 +167,9 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,  # Ensure refresh tokens don't stay valid forever
     'BLACKLIST_AFTER_ROTATION': True, # Blacklist old refresh tokens
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY, # Use your secret key here
+    'SIGNING_KEY': SECRET_KEY,
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    # ... other settings
 }
 
 # Internationalization
@@ -205,20 +217,6 @@ STATICFILES_FINDERS = (
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
     "compressor.finders.CompressorFinder",
 )
-
-# Handle .env file
-def load_env(env_path=".env"):
-    """Loads environment variables from a .env file."""
-    with open(env_path) as f:
-        for line in f:
-            if (
-                line.startswith("#") or not line.strip()
-            ):  # Skip comments and empty lines
-                continue
-            key, value = line.strip().split("=", 1)
-            os.environ[key] = value
-
-load_env()
 
 # GENAI API keys
 GENAI_API_KEY = os.environ.get("GENAI_API_KEY")
