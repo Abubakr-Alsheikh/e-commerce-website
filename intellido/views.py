@@ -128,6 +128,72 @@ def upload_to_gemini(path, display_name=None, mime_type=None):
     return file
 
 
+dump_response = """Sure, I can help you with that! I've analyzed the image you've provided. Here are some tasks that you might want to consider related to your database:
+
+```json
+[
+  {
+    "title": "Identify Primary Keys",
+    "description": "Go through each table and confirm the primary key for each one. Verify that they are correctly identified and understood."
+  },
+  {
+    "title": "Define Foreign Keys",
+    "description": "Identify any relationships between tables, and specify the foreign keys that connect them. Ensure the foreign keys are referencing the correct primary keys."
+  },
+  {
+    "title": "Document Data Types",
+    "description": "For each column in your database, document the data type you plan to use (e.g., integer, string, date). Choose the most appropriate data type for each column."
+  },
+  {
+    "title": "Consider Data Integrity",
+    "description": "Think about potential data integrity constraints, such as unique values, data range limits, or required fields. You might implement these as constraints in your database design."
+  },
+  {
+    "title": "Normalize Database Design",
+    "description": "Evaluate if your current database design follows normalization principles. If not, consider refactoring to improve data redundancy and consistency."
+  }
+]
+```"""
+
+ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".heic", ".heif"]
+ALLOWED_AUDIO_EXTENSIONS = [
+    ".wav",
+    ".mp3",
+    ".mpeg",
+    ".x-m4a",
+    ".aiff",
+    ".aac",
+    ".ogg",
+    ".flac",
+]
+ALLOWED_VIDEO_EXTENSIONS = [
+    ".mp4",
+    ".mpeg",
+    ".mov",
+    ".avi",
+    ".x-flv",
+    ".mpg",
+    ".webm",
+    ".wmv",
+    ".3gpp",
+]
+ALLOWED_TEXT_EXTENSIONS = [
+    ".txt",
+    ".html",
+    ".css",
+    ".js",
+    ".ts",
+    ".csv",
+    ".md",
+    ".py",
+    ".json",
+    ".xml",
+    ".rtf",
+]
+
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+
+
 class ChatHistoryViewSet(viewsets.ModelViewSet):
     serializer_class = ChatHistorySerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -147,7 +213,28 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
 
         uploaded_file = request.FILES.get("file")  # Get the uploaded file
         if uploaded_file:
-            # File upload logic
+            # --- File Validation ---
+            file_name, file_extension = os.path.splitext(uploaded_file.name)
+
+            # 1. File Type Validation
+            if (
+                file_extension.lower() not in ALLOWED_IMAGE_EXTENSIONS
+                and file_extension.lower() not in ALLOWED_AUDIO_EXTENSIONS
+                and file_extension.lower() not in ALLOWED_VIDEO_EXTENSIONS
+                and file_extension.lower() not in ALLOWED_TEXT_EXTENSIONS
+            ):
+                return Response({"error": "Invalid file type."}, status=400)
+
+            # 2. File Size Validation
+            if uploaded_file.size > MAX_FILE_SIZE:
+                return Response(
+                    {
+                        "error": f"File size too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024)}MB."
+                    },
+                    status=400,
+                )
+
+            # --- File Upload Logic ---
             file_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.name)
             with open(file_path, "wb+") as destination:
                 for chunk in uploaded_file.chunks():
@@ -158,21 +245,20 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                 gemini_file = upload_to_gemini(
                     file_path, uploaded_file.name, uploaded_file.content_type
                 )
-
-                new_message["parts"].append(gemini_file)
+                new_message["parts"].append(gemini_file)  # File object
+                # new_message["parts"].append(file_path)
             except Exception as e:
                 return Response(
                     {"error": f"Failed to upload file to Gemini: {str(e)}"}, status=500
                 )
             finally:
-                # Optionally delete the file after uploading to Gemini
                 os.remove(file_path)
 
         user_message = request.data.get("content")
         if user_message:
             new_message["parts"].append(user_message)
 
-        if new_message["parts"]:  # Check if the message has any content (file or text)
+        if new_message["parts"]:
 
             # Start a new chat session if the history is empty
             if not chat_history.current_chat:
@@ -193,44 +279,20 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                         "parts": [initial_prompt],
                     },
                 )
+
             chat_session = model.start_chat(history=chat_history.current_chat)
             if user_message:
                 response = chat_session.send_message(new_message["parts"])
                 response = response.text
-#                 response = """Sure, I can help you with that! I've analyzed the image you've provided. Here are some tasks that you might want to consider related to your database:
+                # response = dump_response
 
-# ```json
-# [
-#   {
-#     "title": "Identify Primary Keys",
-#     "description": "Go through each table and confirm the primary key for each one. Verify that they are correctly identified and understood."
-#   },
-#   {
-#     "title": "Define Foreign Keys",
-#     "description": "Identify any relationships between tables, and specify the foreign keys that connect them. Ensure the foreign keys are referencing the correct primary keys."
-#   },
-#   {
-#     "title": "Document Data Types",
-#     "description": "For each column in your database, document the data type you plan to use (e.g., integer, string, date). Choose the most appropriate data type for each column."
-#   },
-#   {
-#     "title": "Consider Data Integrity",
-#     "description": "Think about potential data integrity constraints, such as unique values, data range limits, or required fields. You might implement these as constraints in your database design."
-#   },
-#   {
-#     "title": "Normalize Database Design",
-#     "description": "Evaluate if your current database design follows normalization principles. If not, consider refactoring to improve data redundancy and consistency."
-#   }
-# ]
-# ```"""
-
-                # Add AI response to chat history
                 ai_message = {
                     "role": "model",
                     "parts": [response],
-                }  # Using 'parts' for consistency
+                }
                 if uploaded_file != None:
-                    new_message["parts"][0] = gemini_file.uri
+                    new_message["parts"][0] = gemini_file.uri  # string uri
+                    # new_message["parts"][0] = file_path
                 chat_history.current_chat.append(new_message)
                 chat_history.current_chat.append(ai_message)
             chat_history.save()
