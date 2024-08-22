@@ -280,6 +280,16 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     },
                 )
 
+            # --- Retrieve File Objects from URIs before starting chat ---
+            for message in chat_history.current_chat:
+                for i, part in enumerate(message["parts"]):
+                    if isinstance(part, str) and part.startswith("https://generativelanguage.googleapis.com/"):  # Adjust URI recognition as needed
+                        try:
+                            file_object = genai.get_file(name=part)
+                            message["parts"][i] = file_object
+                        except Exception as e:
+                            print(f"Error retrieving file in google gemini: {e}")
+
             chat_session = model.start_chat(history=chat_history.current_chat)
             if user_message:
                 response = chat_session.send_message(new_message["parts"])
@@ -290,9 +300,11 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     "role": "model",
                     "parts": [response],
                 }
-                if uploaded_file != None:
-                    new_message["parts"][0] = gemini_file.uri  # string uri
-                    # new_message["parts"][0] = file_path
+                # --- Replace File Objects with URIs before saving ---
+                for message in chat_history.current_chat:
+                    for i, part in enumerate(message["parts"]):
+                        if isinstance(part, type(file_object)):
+                            message["parts"][i] = part.uri
                 chat_history.current_chat.append(new_message)
                 chat_history.current_chat.append(ai_message)
             chat_history.save()
