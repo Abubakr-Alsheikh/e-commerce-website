@@ -315,13 +315,13 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     "parts": [response],
                 }
 
+                chat_history.current_chat.append(new_message)
+                chat_history.current_chat.append(ai_message)
                 # --- Replace File Objects with URIs before saving ---
                 for message in chat_history.current_chat:
                     for i, part in enumerate(message["parts"]):
                         if checkedFileType and isinstance(part, type(file_object)):
                             message["parts"][i] = part.uri
-                chat_history.current_chat.append(new_message)
-                chat_history.current_chat.append(ai_message)
             chat_history.save()
 
             return Response(
