@@ -124,7 +124,6 @@ def upload_to_gemini(path, display_name=None, mime_type=None):
     See https://ai.google.dev/gemini-api/docs/prompting_with_media
     """
     file = genai.upload_file(path, display_name=display_name, mime_type=mime_type)
-    print(f"Uploaded file '{file.name}' as: {file.uri}")
     return file
 
 
@@ -280,7 +279,8 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     },
                 )
 
-            checkedFileType = False
+            file_object = ""
+            check_file_object = False
             # --- Retrieve File Objects from URIs before starting chat ---
             for message in chat_history.current_chat:
                 for i, part in enumerate(message["parts"]):
@@ -288,19 +288,10 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                         "https://generativelanguage.googleapis.com/"
                     ):
                         try:
-                            file_object = genai.get_file(name=part)
+                            file_name_from_gemini = "files/" + part.split("/")[-1]
+                            file_object = genai.get_file(name=file_name_from_gemini)
                             message["parts"][i] = file_object
-                            checkedFileType = True
-                        except Exception as e:
-                            print(f"Error retrieving file in google gemini: {e}")
-
-            # --- Retrieve File Objects from URIs before starting chat ---
-            for message in chat_history.current_chat:
-                for i, part in enumerate(message["parts"]):
-                    if isinstance(part, str) and part.startswith("https://generativelanguage.googleapis.com/"):  # Adjust URI recognition as needed
-                        try:
-                            file_object = genai.get_file(name=part)
-                            message["parts"][i] = file_object
+                            check_file_object = True
                         except Exception as e:
                             print(f"Error retrieving file in google gemini: {e}")
 
@@ -314,13 +305,16 @@ class ChatHistoryViewSet(viewsets.ModelViewSet):
                     "role": "model",
                     "parts": [response],
                 }
-
                 chat_history.current_chat.append(new_message)
                 chat_history.current_chat.append(ai_message)
+
+                if len(new_message["parts"]) > 1:
+                    file_object = new_message["parts"][0]
+                    check_file_object = True
                 # --- Replace File Objects with URIs before saving ---
                 for message in chat_history.current_chat:
                     for i, part in enumerate(message["parts"]):
-                        if checkedFileType and isinstance(part, type(file_object)):
+                        if check_file_object and isinstance(part, type(file_object)):
                             message["parts"][i] = part.uri
             chat_history.save()
 
