@@ -2080,6 +2080,10 @@ input:checked + .toggle-bg {
   background-position: right;
 }
 
+.bg-left {
+  background-position: left;
+}
+
 .bg-no-repeat {
   background-repeat: no-repeat;
 }
