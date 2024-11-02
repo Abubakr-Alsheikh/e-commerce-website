@@ -1,0 +1,18 @@
+{% extends "zbon_company/_base.html" %} {% load static %} {% block content %}
+<section class="bg-white px-4 pb-16 pt-36 antialiased dark:bg-gray-900">
+  <div class="mx-auto grid max-w-screen-xl justify-items-center rounded-lg bg-gray-50 p-4 py-14 dark:bg-gray-800 md:p-8 lg:grid-cols-12 lg:gap-8 lg:p-16 xl:gap-16">
+    <div class="lg:col-span-5 lg:mt-0">
+        <img class="mb-4 h-56 w-56 rounded-2xl shadow-xl sm:h-96 sm:w-96 md:h-full md:w-full" src="{% static "zbon_company/images/product_care_guides.webp" %}" alt="peripherals" />
+    </div>
+    <div class="me-auto place-self-center lg:col-span-7" dir="rtl">
+      <h1 class="mb-5 text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-4xl">ارشادات العناية بالمنتج</h1>
+      <h2 class="mb-3 text-2xl font-semibold text-gray-900 dark:text-white">للحفاظ على جودة العباية :</h2>
+      <ul class="max-w-lg list-inside list-disc space-y-1 text-lg text-gray-500 dark:text-gray-400">
+        <li>يغسل المنتج غسيل جاف فقط.</li>
+        <li>يكوى المنتج بإستخدام البخار فقط.</li>
+        <li>يجفف المنتج بالظل ، ولا يتم استخدام النشافه او المجفف الحراري.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+{% endblock content %}

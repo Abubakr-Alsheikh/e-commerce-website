@@ -3,6 +3,7 @@ module.exports = {
   darkMode: "class",
   content: [
     "./screen_scene/templates/**/*.html",
+    "./zbon_company/templates/**/*.html",
     "./node_modules/flowbite/**/*.js",
   ],
   theme: {

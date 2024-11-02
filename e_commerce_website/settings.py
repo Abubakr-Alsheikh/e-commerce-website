@@ -68,7 +68,8 @@ INSTALLED_APPS = [
     "core",
     "ask_yourtube",
     "screen_scene",
-    "intellido"
+    "intellido",
+    "zbon_company",
 ]
 
 MIDDLEWARE = [

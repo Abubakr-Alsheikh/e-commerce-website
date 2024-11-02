@@ -1,0 +1,101 @@
+{% extends "zbon_company/_base.html" %} {% load static %} {% block content %}
+
+<section class="h-svh bg-cover bg-right bg-no-repeat bg-blend-multiply" style="background-image: url({% static 'zbon_company/images/background.jpg' %})">
+  <div class="mx-auto max-w-screen-xl px-4 py-56 text-center md:text-justify lg:py-56" dir="rtl">
+    <h1 class="mb-4 text-3xl font-extrabold leading-none tracking-tight text-primary-700 md:text-5xl lg:text-5xl">مرحبًا بكم في شركة زبون</h1>
+    <div class="flex w-full justify-start text-justify">
+      <p class="mb-8 max-w-2xl text-lg font-normal text-primary-700 lg:text-xl" style="line-height: 2">حيث نقدم لكم الازياء التي تناسب كل الأذواق والمناسبات. فريقنا من خبراء الموضة مستعد لمساعدتكم في اختيار الأزياء المثالية التي تعكس أسلوبكم الفريد وتبرز جمالكم. سواء كنتم تبحثون عن إطلالة يومية، مناسبة خاصة، أو حتى استشارة شاملة حول تنسيق الملابس، نحن هنا لنقدم لكم الدعم والإلهام. انضموا إلينا في رحلة اكتشاف الأزياء واستمتعوا بتجربة تسوق مميزة تلبي احتياجاتكم.</p>
+    </div>
+    <div class="flex flex-col space-y-4 sm:flex-row sm:justify-start sm:space-y-0">
+      <a href="{% url "home:products" %}" class="inline-flex items-center justify-center rounded-lg bg-primary-700 px-5 py-3 text-center text-base font-medium text-white hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-900">
+        استكشف مجموعتنا
+        <svg class="ms-2 h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-screen-xl px-4 py-8 sm:py-16 lg:px-6">
+    <div class="mb-8 text-center lg:mb-16">
+      <h2 class="mb-4 block text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">أهم مميزات منتجاتنا</h2>
+    </div>
+    <div class="space-y-8 text-center md:grid md:grid-cols-2 md:gap-12 md:space-y-0 lg:grid-cols-3" dir="rtl">
+      <div class="flex flex-col items-center">
+        <!-- Center items within each div -->
+        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900 lg:h-20 lg:w-20">
+          <i class="fas fa-gem fa-2x text-primary-600 dark:text-primary-300"></i>
+          <!-- Example: Gem Icon -->
+        </div>
+        <h3 class="mb-2 text-xl font-bold dark:text-white">جودة عالية</h3>
+        <p class="text-gray-500 dark:text-gray-400">نستخدم أجود الخامات لضمان متانة وجودة منتجاتنا، ونحرص على دقة التصنيع لضمان راحة وإطلالة مثالية.</p>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900 lg:h-20 lg:w-20">
+          <i class="fas fa-palette fa-2x text-primary-600 dark:text-primary-300"></i>
+          <!-- Example: Palette Icon -->
+        </div>
+        <h3 class="mb-2 text-xl font-bold dark:text-white">تصاميم فريدة</h3>
+        <p class="text-gray-500 dark:text-gray-400">فريقنا من المصممين الموهوبين يعمل على تقديم تصاميم أنيقة ومبتكرة تناسب جميع الأذواق، ونستوحي إبداعاتنا من أحدث اتجاهات الموضة العالمية مع لمسة عربية أصيلة.</p>
+      </div>
+      <div class="flex flex-col items-center">
+        <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900 lg:h-20 lg:w-20">
+          <i class="fas fa-hand-holding-heart fa-2x text-primary-600 dark:text-primary-300"></i>
+          <!-- Example: Hand Holding Heart Icon -->
+        </div>
+        <h3 class="mb-2 text-xl font-bold dark:text-white">راحة وأناقة</h3>
+        <p class="text-gray-500 dark:text-gray-400">منتجاتنا مصممة بعناية لتوفير الراحة والأناقة في آن واحد، نقدم خيارات مريحة و جميلة تناسب جميع المناسبات، من الفعاليات اليومية إلى المناسبات الخاصة.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="bg-gray-50 dark:bg-gray-900" id="about_us">
+  <div class="mx-auto max-w-screen-xl items-center gap-16 px-4 py-8 lg:grid lg:grid-cols-2 lg:px-6 lg:py-16">
+    <div class="text-right font-light text-gray-500 dark:text-gray-400 sm:text-lg">
+      <h2 class="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">من نحن</h2>
+      <p class="mb-4 font-medium">نحن في شركة زبون نؤمن بأن الأزياء ليست مجرد ملابس، بل هي تعبير عن الهوية والثقة بالنفس. تأسست شركتنا بهدف تقديم تصاميم فريدة تجمع بين الأناقة والراحة، مع التركيز على الجودة العالية والخامات الفاخرة. فلسفتنا ترتكز على تعزيز الجمال الداخلي والخارجي لكل عميل،</p>
+      <p class="font-medium">مما يدفعنا لتقديم افضل الخدمات التي تساعدكم في اختيار ما يناسبكم. نحن هنا لنجعل كل تجربة تسوق مميزة وملهمة، حيث نطمح لأن نكون جزءًا من رحلتكم في عالم الموضة.</p>
+    </div>
+    <div class="mt-8 grid grid-cols-2 gap-4"><img class="w-full rounded-lg" src="{% static "zbon_company/images/image3.jpeg" %}" alt="office content 1" /> <img class="mt-4 w-full rounded-lg lg:mt-10" src="{% static "zbon_company/images/image4.jpeg" %}" alt="office content 2" /></div>
+  </div>
+</section>
+
+<section class="bg-white dark:bg-gray-900">
+  <div class="mx-auto max-w-screen-xl px-4 py-8 sm:py-16 lg:px-6">
+    <div class="mb-8 lg:mb-16">
+      <h2 class="mb-4 text-center text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">اكثر المنتجات طلبا</h2>
+      {% comment %}
+      <p class="text-gray-500 dark:text-gray-400 sm:text-xl">Here at Flowbite we focus on markets where technology, innovation, and capital can unlock long-term value and drive economic growth.</p>
+      {% endcomment %}
+    </div>
+    <div class="justify-items-center space-y-8 md:grid md:grid-cols-2 md:gap-12 md:space-y-0 lg:grid-cols-3">
+      {% for product in featured_products %}
+      <div class="max-w-sm rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800" dir="rtl">
+        <a href="{{ product.get_absolute_url }}">
+          <img class="h-[450px] w-full rounded-t-lg" src="{% if product.image %}{{ product.image.url }}{% else %}{% static 'images/placeholder.png' %}{% endif %}" alt="{{ product.name }}" />
+        </a>
+        <div class="p-5">
+          <a href="{{ product.get_absolute_url }}">
+            <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ product.name }}</h5>
+          </a>
+          <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">{{ product.description }}</p>
+          <a href="{{ product.get_absolute_url }}" class="inline-flex items-center rounded-lg bg-primary-700 px-3 py-2 text-center text-sm font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+            اطلع على التفاصيل
+            <svg class="ms-2 h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
+              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
+            </svg>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-10 flex w-full items-center justify-center">
+      <a href="{% url "home:products" %}" class="inline-flex items-center rounded-lg bg-primary-700 px-3 py-2 text-center text-lg font-medium text-white hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"> شاهد المزيد من منتجاتنا </a>
+    </div>
+  </div>
+</section>
+
+{% endblock content %}

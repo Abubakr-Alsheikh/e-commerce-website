@@ -1,0 +1,38 @@
+{% load compress %} {% load static %}
+
+<!DOCTYPE html>
+<html lang="ar">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zobn Company</title>
+    <link rel="icon" type="image/x-icon" href="{% static "zbon_company/images/logo.png" %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Changa:wght@200..800&family=Noto+Sans+Arabic:wght@100..900&family=Tajawal:wght@200;300;400;500;700;800;900&display=swap" rel="stylesheet">
+    {% compress css %}
+    <link rel="stylesheet" href="{% static 'src/output.css' %}" />
+    {% endcompress %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+      h1, h2, h3, p, a{
+        font-family: "Tajawal", "Noto Sans Arabic", sans-serif;
+        font-optical-sizing: auto;
+        font-variation-settings:"wdth" 100;
+      }
+    </style>
+  </head>
+
+  <body class="">
+    {% include "zbon_company/include/header.html" %}
+
+    <div class="mx-auto">{% block content %} {% endblock content %}</div>
+
+    {% include "zbon_company/include/footer.html" %}
+    <script src="{% static "zbon_company/js/scripts.js" %}">
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+  </body>
+</html>

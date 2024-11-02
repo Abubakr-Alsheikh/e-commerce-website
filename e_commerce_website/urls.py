@@ -24,4 +24,5 @@ urlpatterns = [
     path('askvid/', include('ask_yourtube.urls')),
     path('screen-scene/', include('screen_scene.urls')),
     path('intellido/', include('intellido.urls')),
+    path('zbon_company/', include('zbon_company.urls')),
 ]
