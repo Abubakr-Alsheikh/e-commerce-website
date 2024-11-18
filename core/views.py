@@ -618,6 +618,7 @@ def order_complete(request):
 # Generative AI
 @csrf_exempt
 def chatRespone(request):
+    print(request)
     if request.method == "POST":
         if not request.body:
             return JsonResponse({"error": "Empty request"}, status=400)
