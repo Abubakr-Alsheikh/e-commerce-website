@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "screen_scene",
     "intellido",
     "zbon_company",
+    "coaching_website",
 ]
 
 MIDDLEWARE = [

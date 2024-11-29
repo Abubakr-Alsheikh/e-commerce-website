@@ -25,4 +25,5 @@ urlpatterns = [
     path('screen-scene/', include('screen_scene.urls')),
     path('intellido/', include('intellido.urls')),
     path('zbon_company/', include('zbon_company.urls')),
+    path('coaching_website/', include('coaching_website.urls')),
 ]

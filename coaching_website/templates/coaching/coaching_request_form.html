@@ -1,0 +1,76 @@
+{% extends "coaching/_base.html" %}
+{% block content %}
+<section class="bg-white dark:bg-gray-900">
+    <div class="py-8 px-4 mx-auto max-w-2xl lg:py-10">
+        <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Make a Coaching Request</h2>
+
+        {% if messages %}
+            <ul class="messages">
+                {% for message in messages %}
+                <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>
+                    {% if message.tags == 'success' %}
+                        <div class="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400" role="alert">
+                            <span class="font-medium">Success!</span> {{ message }}
+                        </div>
+                    {% else %}
+                        <div class="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400" role="alert">
+                            <span class="font-medium">Error!</span> {{ message }}
+                        </div>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="grid gap-4 sm:grid-cols-2 sm:gap-6">
+                <div class="sm:col-span-2">
+                    <label for="id_scheduled_datetime" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Date & Time</label>
+                    {{ form.scheduled_datetime }}
+                </div>
+                <div class="w-full">
+                    <label for="id_name" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Name</label>
+                    {{ form.name }}
+                </div>
+                <div class="w-full">
+                    <label for="id_phone" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Phone</label>
+                    {{ form.phone }}
+                </div>
+                <div class="w-full">
+                    <label for="id_email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Email</label>
+                    {{ form.email }}
+                </div>
+                <div class="w-full">
+                    <label for="id_guests" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Guests</label>
+                    {{ form.guests }}
+                </div>
+                <div>
+                    <label for="id_coaching_niche" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Coaching Niche</label>
+                    {{ form.coaching_niche }}
+                </div>
+                <div>
+                    <label for="id_revenue_target" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Revenue Target</label>
+                    {{ form.revenue_target }}
+                </div>
+                <div>
+                    <label for="id_roadblock" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Roadblock</label>
+                    {{ form.roadblock }}
+                </div>
+                <div>
+                    <label for="id_referral_source" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Referral Source</label>
+                    {{ form.referral_source }}
+                </div>
+                <div class="sm:col-span-2">
+                    <label for="id_details" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Details</label>
+                    {{ form.details }}
+                </div>
+            </div>
+            <button type="submit" class="inline-flex items-center px-5 py-2.5 mt-4 sm:mt-6 text-sm font-medium text-center text-white bg-blue-700 rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 hover:bg-blue-800">
+                Submit Request
+            </button>
+        </form>
+    </div>
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+{% endblock content %}

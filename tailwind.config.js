@@ -4,6 +4,7 @@ module.exports = {
   content: [
     "./screen_scene/templates/**/*.html",
     "./zbon_company/templates/**/*.html",
+    "./coaching_website/templates/**/*.html",
     "./node_modules/flowbite/**/*.js",
   ],
   theme: {
