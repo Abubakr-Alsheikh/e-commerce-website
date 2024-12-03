@@ -1,20 +1,29 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.core.mail import send_mail
 from django.conf import settings  # Import settings for email configuration
 from django.contrib import messages
 from django.template.loader import render_to_string
 from django.utils import timezone
-from .forms import CoachingRequestForm  # Assuming your form is in forms.py
+
+from .models import PricingPlan
+from .forms import CoachingRequestForm
 
 
 def index(request):
-    return render(request, 'coaching/index.html')
+    plans = PricingPlan.objects.all()
+    return render(request, 'coaching/index.html', {'plans': plans})
 
-def coaching_request_view(request):
+def coaching_request_view(request, plan_id):
+    try:
+        plan = get_object_or_404(PricingPlan, pk=plan_id)
+    except PricingPlan.DoesNotExist:
+        messages.error(request, "Invalid plan selected.")
+        return redirect('coaching:index') # Redirect to the index page or another appropriate page
+
     if request.method == 'POST':
         form = CoachingRequestForm(request.POST)
         if form.is_valid():
-            
+
             scheduled_datetime = form.cleaned_data['scheduled_datetime']
 
             # Extract date and time components
@@ -25,8 +34,11 @@ def coaching_request_view(request):
             if scheduled_datetime <= timezone.now() + timezone.timedelta(hours=24):
                 messages.error(request, 'Please select a date and time at least 24 hours in the future.')
             else:
-                coaching_request = form.save()  # Save the form data to the database
 
+                coaching_request = form.save(commit=False) # Don't save yet
+                coaching_request.plan = plan
+
+                coaching_request.save() # Now save
                 # Send email to the user
                 # user_email = form.cleaned_data['email']
                 # user_name = form.cleaned_data['name']
@@ -58,10 +70,14 @@ def coaching_request_view(request):
                 # send_mail(admin_subject, '', settings.DEFAULT_FROM_EMAIL, [admin_email], html_message=admin_html_message, fail_silently=False)
 
 
-                messages.success(request, 'Your coaching request has been submitted successfully!')
-                return redirect('coach:coaching_request')  # Redirect to a thank you page
+                messages.success(request, 'Your coaching request has been submitted successfully, wait until we contact you!')
+                return redirect('coaching:index')
 
     else:
-        form = CoachingRequestForm()
+        try:
+            selected_plan = PricingPlan.objects.get(pk=plan_id) # Get plan for initial form
+            form = CoachingRequestForm(initial={'plan': selected_plan})  # Pre-select the plan
+        except PricingPlan.DoesNotExist:
+             form = CoachingRequestForm()
 
-    return render(request, 'coaching/coaching_request_form.html', {'form': form})
+    return render(request, 'coaching/coaching_request_form.html', {'form': form, 'plan': plan})

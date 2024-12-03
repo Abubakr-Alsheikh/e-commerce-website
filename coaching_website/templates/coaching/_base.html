@@ -13,6 +13,18 @@
     {% compress css %}
     <link rel="stylesheet" href="{% static 'src/output.css' %}">
     {% endcompress %}
+    <style>
+        .featured-badge {
+            position: absolute; /* Make the badge positioned */
+            top: 0.5rem; /* Adjust top position */
+            right: 0.5rem; /* Adjust right position */
+            background-color: #FFD700; /* Example color, adjust as needed */
+            color: #000; /* Text color */
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem; /* Rounded corners */
+            font-weight: bold;
+          }
+    </style>
 
 </head>
 
@@ -22,7 +34,9 @@
         {% block content %}
         {% endblock content %}
     </div>
+    {% include "coaching/footer.html" %}
     <script src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
 </body>
 
 </html>

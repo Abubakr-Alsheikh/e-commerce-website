@@ -1,18 +1,141 @@
 {% extends "coaching/_base.html" %}
 {% block title %}Home{% endblock title %}
+{% load static %}
 {% block content %}
-<section class="rounded-none bg-gray-700 bg-[url('https://flowbite.s3.amazonaws.com/docs/jumbotron/conference.jpg')] bg-center bg-no-repeat bg-blend-multiply sm:rounded-3xl">
-    <div class="mx-auto max-w-screen-xl px-4 py-48 text-center lg:py-56">
-        <h1 class="mb-4 text-4xl font-extrabold leading-none tracking-tight text-white md:text-5xl lg:text-6xl">We invest in the world’s potential</h1>
-        <p class="mb-8 text-lg font-normal text-gray-300 sm:px-16 lg:px-48 lg:text-xl">We focus on markets where technology, innovation, and capital can unlock long-term value and drive economic growth.</p>
-        <div class="flex flex-col space-y-4 sm:flex-row sm:justify-center sm:space-y-0">
-            <a href="{% url "coach:coaching_request" %}" class="inline-flex items-center justify-center rounded-lg bg-blue-700 px-5 py-3 text-center text-base font-medium text-white hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 dark:focus:ring-blue-900">
-                Book Now
+<section class="bg-white dark:bg-gray-900">
+    <div class="mx-auto grid max-w-screen-xl items-center px-4 py-8 pt-2 md:justify-center lg:grid-cols-12 lg:gap-8 lg:py-16 lg:pt-12 xl:gap-0">
+        <div class="mr-auto place-self-center text-center lg:col-span-7 lg:text-left">
+            <h1 class="mb-4 max-w-2xl text-4xl font-extrabold leading-none tracking-tight dark:text-white md:text-5xl xl:text-6xl">We invest in the world’s potential</h1>
+            <p class="mb-6 max-w-2xl font-light text-gray-500 dark:text-gray-400 md:text-lg lg:mb-8 lg:text-xl">We focus on markets where technology, innovation, and capital can unlock long-term value and drive economic growth.</p>
+            <a href="#price" class="inline-flex items-center justify-center rounded-lg bg-primary-700 px-5 py-3 text-center text-base font-medium text-white hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-900">
+                See Our Plans
                 <svg class="ms-2 h-3.5 w-3.5 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10">
                     <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/>
                 </svg>
             </a>
         </div>
+        <div class="-order-1 mb-5 flex justify-center md:order-1 md:mb-0 lg:col-span-5 lg:mt-0 lg:justify-end">
+            <img src="{% static "images/logo.png" %}" alt="mockup">
+        </div>
     </div>
 </section>
+<section class="rounded-3xl bg-gray-50 px-4 py-8 antialiased dark:bg-gray-900 md:py-16" id="about">
+    <div class="mx-auto mb-5 max-w-screen-md text-center">
+        <h2 class="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">About</h2>
+    </div>
+    <div class="mx-auto grid max-w-screen-xl bg-gray-50 p-4 dark:bg-gray-800 md:p-4 lg:grid-cols-12 lg:gap-8 lg:p-8 xl:gap-16">
+      <div class="mb-5 lg:col-span-5">
+          <img class="mb-4 h-full w-full rounded-2xl" src="{% static "images/hassan.jpg" %}" alt="peripherals" />
+      </div>
+      <div class="me-auto place-self-center lg:col-span-7">
+        <h1 class="mb-3 text-2xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white md:text-4xl">
+            We invest in the world’s potential
+        </h1>
+        <p class="mb-6 text-gray-500 dark:text-gray-400">Ex cumque tempore, ex atque dicta placeat officiis porro, quae quo cum consequuntur culpa ab eum quod hic voluptatum molestiae, at omnis similique accusantium eos delectus. Rem adipisci sapiente inventore, et error minus quisquam blanditiis cumque ut deserunt illo recusandae, alias harum omnis et amet, eaque laboriosam veniam saepe debitis pariatur dolor aliquam rerum quaerat deleniti neque, consequuntur commodi eveniet rem tenetur sed nostrum? Expedita sit porro harum sint dolor non iure, adipisci voluptates voluptatem possimus modi facilis quas veniam delectus, unde odio quisquam recusandae amet sed nesciunt facilis, nobis provident odio excepturi hic eveniet suscipit quasi veniam facere id sunt, porro maiores fugit ipsam eaque quam perspiciatis.</p>
+      </div>
+    </div>
+  </section>
+  <section class="bg-white dark:bg-gray-900" id="price">
+    <div class="mx-auto max-w-screen-xl px-4 py-8 lg:px-6 lg:py-16">
+        <div class="mx-auto mb-8 max-w-screen-md text-center lg:mb-12">
+            <h2 class="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">Our Pricing Plans</h2>
+        </div>
+        <div class="space-y-8 sm:gap-6 lg:grid lg:grid-cols-3 lg:space-y-0 xl:gap-10">
+            {% for plan in plans %}
+                <div class="relative mx-auto flex max-w-lg flex-col rounded-lg border border-gray-100 bg-white p-6 text-center text-gray-900 shadow dark:border-gray-600 dark:bg-gray-800 dark:text-white xl:p-8">
+                    <h3 class="mb-4 text-2xl font-semibold">{{ plan.name }}</h3>
+                    <p class="font-light text-gray-500 dark:text-gray-400 sm:text-lg">{{ plan.description }}</p>
+                    <div class="my-8 flex items-baseline justify-center">
+                        <span class="mr-2 text-3xl font-extrabold">EGP {{ plan.price }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">/{{ plan.sessions }} Session{{ plan.sessions|pluralize }}</span>
+                    </div>
+                    <ul role="list" class="mb-8 space-y-4 text-left">
+                        <li class="flex items-center space-x-3">
+                            <svg class="h-5 w-5 flex-shrink-0 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>You will have: <span class="font-semibold">{{ plan.sessions }} Session{{ plan.sessions|pluralize }}</span></span>
+                        </li>
+                    </ul>
+                    <a href="{% url 'coaching:coaching_request' plan.pk %}" class="rounded-lg bg-primary-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-primary-700 focus:ring-4 focus:ring-primary-200 dark:text-white dark:focus:ring-primary-900">Get started</a>
+                    {% if plan.featured %}
+                        <span class="absolute right-2 top-2 rounded-md bg-yellow-400 px-2 py-1 text-sm font-bold text-white">Featured</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+<section class="rounded-3xl bg-gray-50" id="contact">
+    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div class="mx-auto max-w-2xl text-center lg:max-w-4xl">
+            <h2 class="text-3xl font-extrabold text-gray-900">Visit Our Location</h2>
+            <p class="mt-4 text-lg text-gray-500">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+        </div>
+        <div class="mt-16 lg:mt-20">
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div class="overflow-hidden rounded-lg">
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d11672.945750644447!2d-122.42107853750231!3d37.7730507907087!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80858070cc2fbd55%3A0xa71491d736f62d5c!2sGolden%20Gate%20Bridge!5e0!3m2!1sen!2sus!4v1619524992238!5m2!1sen!2sus"
+                        width="100%" height="480" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+                <div>
+                    <div class="mx-auto max-w-full overflow-hidden rounded-lg">
+                        <div class="px-6 py-4">
+                            <h3 class="text-lg font-medium text-gray-900">Our Address</h3>
+                            <p class="mt-1 text-gray-600">123 Main St, San Francisco, CA 94105</p>
+                        </div>
+                        <div class="border-t border-gray-200 px-6 py-4">
+                            <h3 class="text-lg font-medium text-gray-900">Hours</h3>
+                            <p class="mt-1 text-gray-600">Sunday - Thursday: 12am - 6pm</p>
+                            <p class="mt-1 text-gray-600">Saturday: 10am - 6pm</p>
+                            <p class="mt-1 text-gray-600">Friday: Closed</p>
+                        </div>
+                        <div class="border-t border-gray-200 px-6 py-4">
+                            <h3 class="text-lg font-medium text-gray-900">Contact</h3>
+                            <p class="mt-1 text-gray-600">Email: info@example.com</p>
+                            <p class="mt-1 text-gray-600">Phone: +1 23494 34993</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% if messages %}  {# Check for messages #}
+{% for message in messages %}
+  {% if message.tags == 'success' %}
+    <script>
+      // Show the success modal on page load
+      document.addEventListener('DOMContentLoaded', function() {
+        var successModal = new Modal(document.getElementById('successModal'));
+        successModal.show();
+      });
+    </script>
+
+    <div id="successModal" tabindex="-1" aria-hidden="true" class="fixed left-0 right-0 top-0 z-50 hidden h-modal w-full items-center justify-center overflow-y-auto overflow-x-hidden md:inset-0 md:h-full">
+       <div class="relative h-full w-full max-w-md p-4 md:h-auto">
+          <div class="relative rounded-lg bg-white p-4 text-center shadow dark:bg-gray-800 sm:p-5">
+             <button type="button" class="absolute right-2.5 top-2.5 ml-auto inline-flex items-center rounded-lg bg-transparent p-1.5 text-sm text-gray-400 hover:bg-gray-200 hover:text-gray-900 dark:hover:bg-gray-600 dark:hover:text-white" data-modal-toggle="successModal">
+              <svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+              </svg>
+                  <span class="sr-only">Close modal</span>
+              </button>
+              <div class="mx-auto mb-3.5 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 p-2 dark:bg-green-900">
+                  <svg aria-hidden="true" class="h-8 w-8 text-green-500 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                  <span class="sr-only">Success</span>
+              </div>
+              <p class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">{{ message }}</p> 
+              <button data-modal-toggle="successModal" type="button" class="rounded-lg bg-primary-600 px-3 py-2 text-center text-sm font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-900">
+                  Close
+              </button>
+          </div>
+      </div>
+  </div>
+{% endif %}
+{% endfor %}
+{% endif %}
+
 {% endblock content %}
